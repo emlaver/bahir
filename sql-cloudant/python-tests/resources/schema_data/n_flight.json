@@ -1,0 +1,10 @@
+{
+  "firstClassBaseCost": 500,
+  "economyClassBaseCost": 200,
+  "numFirstClassSeats": 10,
+  "numEconomyClassSeats": 200,
+  "airplaneTypeId": "B747",
+  "flightSegmentId": "AA100",
+  "scheduledDepartureTime": "2017-03-29T04:00:00.000Z",
+  "scheduledArrivalTime": "2017-03-29T05:05:30.000Z"
+}

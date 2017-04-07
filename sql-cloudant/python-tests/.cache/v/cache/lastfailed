@@ -1,0 +1,3 @@
+{
+  "test_cloudantapp.py::TestCloudantSparkConnector::()::test_sample_data_using_dataframes": true
+}

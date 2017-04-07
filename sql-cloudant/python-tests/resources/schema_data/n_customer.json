@@ -1,0 +1,15 @@
+{
+  "password": "password",
+  "status": "GOLD",
+  "total_miles": 1000000,
+  "miles_ytd": 1000,
+  "address": {
+    "streetAddress1": "123 Main St.",
+    "city": "Anytown",
+    "stateProvince": "NC",
+    "country": "USA",
+    "postalCode": "27617"
+  },
+  "phoneNumber": "919-123-4567",
+  "phoneNumberType": "BUSINESS"
+}
