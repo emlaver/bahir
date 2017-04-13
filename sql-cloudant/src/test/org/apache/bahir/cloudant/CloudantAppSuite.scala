@@ -38,13 +38,6 @@ class CloudantAppSuite extends JUnitSuite { self =>
   }
   import testImplicits._
 
-  def deleteRecursively(file: File): Unit = {
-    if (file.isDirectory)
-      file.listFiles.foreach(deleteRecursively)
-    if (file.exists && !file.delete)
-      throw new Exception(s"Unable to delete ${file.getAbsolutePath}")
-  }
-
   @Before def before() {
     tempDir.mkdirs()
     tempDir.deleteOnExit()
