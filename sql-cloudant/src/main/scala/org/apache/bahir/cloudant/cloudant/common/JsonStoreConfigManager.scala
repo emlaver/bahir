@@ -14,16 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.bahir.cloudant.common
+package org.apache.bahir.cloudant.cloudant.common
 
 import com.typesafe.config.ConfigFactory
 
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.SparkConf
 
-import org.apache.bahir.cloudant.CloudantConfig
-
- object JsonStoreConfigManager {
+object JsonStoreConfigManager {
   val CLOUDANT_CONNECTOR_VERSION = "2.0.0"
   val SCHEMA_FOR_ALL_DOCS_NUM = -1
 

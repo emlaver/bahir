@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.bahir.cloudant
+package org.apache.bahir.cloudant.cloudant
 
 // scalastyle:off
 import scalaj.http._
@@ -25,7 +25,6 @@ import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.receiver.Receiver
 import org.apache.spark.SparkConf
 
-import org.apache.bahir.cloudant.common._
 // scalastyle:on
 
 class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String])

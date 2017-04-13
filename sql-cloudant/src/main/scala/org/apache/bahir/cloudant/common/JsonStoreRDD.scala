@@ -24,8 +24,6 @@ import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.sources.Filter
 
-import org.apache.bahir.cloudant.CloudantConfig
-
 /**
  * JsonStoreRDDPartition defines each partition as a subset of a query result:
   * the limit rows returns and the skipped rows.

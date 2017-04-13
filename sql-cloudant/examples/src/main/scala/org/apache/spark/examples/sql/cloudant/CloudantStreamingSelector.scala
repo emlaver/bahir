@@ -24,8 +24,6 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.streaming.{ Seconds, StreamingContext, Time }
 
-import org.apache.bahir.cloudant.CloudantReceiver
-
 object CloudantStreamingSelector {
   def main(args: Array[String]) {
     val sparkConf = new SparkConf().setAppName("Cloudant Spark SQL External Datasource in Scala")

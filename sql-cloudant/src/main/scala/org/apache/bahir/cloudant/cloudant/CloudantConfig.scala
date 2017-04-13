@@ -14,15 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.bahir.cloudant
+package org.apache.bahir.cloudant.cloudant
 
 import java.net.URLEncoder
 
 import play.api.libs.json.JsArray
 import play.api.libs.json.Json
 import play.api.libs.json.JsValue
-
-import org.apache.bahir.cloudant.common._
 
 /*
 * Only allow one field pushdown now

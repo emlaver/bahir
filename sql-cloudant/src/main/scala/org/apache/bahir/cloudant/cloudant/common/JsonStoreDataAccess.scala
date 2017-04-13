@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.bahir.cloudant.common
+package org.apache.bahir.cloudant.cloudant.common
 
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -30,9 +30,6 @@ import org.slf4j.LoggerFactory
 import play.api.libs.json._
 
 import org.apache.spark.sql.sources._
-
-import org.apache.bahir.cloudant.CloudantConfig
-import org.apache.bahir.cloudant.common._
 
 
 class JsonStoreDataAccess (config: CloudantConfig)  {

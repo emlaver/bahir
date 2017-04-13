@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.bahir.cloudant
+package org.apache.bahir.cloudant.cloudant
 
 import org.slf4j.LoggerFactory
 
@@ -22,8 +22,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types._
-
-import org.apache.bahir.cloudant.common.{FilterInterpreter, JsonStoreDataAccess, JsonStoreRDD, _}
 
 case class CloudantReadWriteRelation (config: CloudantConfig,
                                       schema: StructType,

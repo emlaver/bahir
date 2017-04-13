@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.bahir.cloudant.common
+package org.apache.bahir.cloudant.cloudant.common
 
 import org.slf4j.LoggerFactory
 import play.api.libs.json.{JsString, JsValue}
