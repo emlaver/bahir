@@ -19,9 +19,7 @@ package org.apache.bahir.cloudant
 
 import java.io.File
 
-import org.scalatest.BeforeAndAfter
 import org.apache.spark.sql.{SQLContext, SQLImplicits, SparkSession}
-import org.apache.spark.{SparkFunSuite, sql}
 import org.junit.{After, Before, Test}
 import org.scalatest.junit.JUnitSuite
 
@@ -44,7 +42,7 @@ class CloudantAppSuite extends JUnitSuite { self =>
     val spark = SparkSession
       .builder()
       .appName("Cloudant Spark SQL Example")
-      .config("cloudant.host", System.getenv("CLOUDANT_USER") + ".cloudant.com")
+      .config("cloudant.host", System.getenv("CLOUDANT_HOST")) // i.e. CLOUDANT_HOST = https://ACCOUNT.cloudant.com
       .config("cloudant.username", System.getenv("CLOUDANT_USER"))
       .config("cloudant.password", System.getenv("CLOUDANT_PASSWORD"))
       .getOrCreate()
