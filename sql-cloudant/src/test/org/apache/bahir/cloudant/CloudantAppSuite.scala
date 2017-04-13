@@ -38,15 +38,22 @@ class CloudantAppSuite extends JUnitSuite { self =>
   }
   import testImplicits._
 
+  def deleteRecursively(file: File): Unit = {
+    if (file.isDirectory)
+      file.listFiles.foreach(deleteRecursively)
+    if (file.exists && !file.delete)
+      throw new Exception(s"Unable to delete ${file.getAbsolutePath}")
+  }
+
   @Before def before() {
     tempDir.mkdirs()
     tempDir.deleteOnExit()
     val spark = SparkSession
       .builder()
       .appName("Cloudant Spark SQL Example")
-      .config("cloudant.host", System.getenv("CLOUDANT_ACCOUNT"))
-      .config("cloudant.username", System.getenv("DB_USER"))
-      .config("cloudant.password", System.getenv("DB_PASSWORD"))
+      .config("cloudant.host", System.getenv("CLOUDANT_USER") + ".cloudant.com")
+      .config("cloudant.username", System.getenv("CLOUDANT_USER"))
+      .config("cloudant.password", System.getenv("CLOUDANT_PASSWORD"))
       .getOrCreate()
   }
 
@@ -54,12 +61,13 @@ class CloudantAppSuite extends JUnitSuite { self =>
     TestUtils.deleteRecursively(tempDir)
   }
 
-  @Test def totalRowsInAirportData {
+  @Test def totalRowsInAirportData() {
 
     // create a temp table from Cloudant db and query it using sql syntax
     spark.sql(
       s"""
-         |CREATE TEMPORARY TABLE airportTable
+         |CREATE
+         |TEMPORARY TABLE airportTable
          |USING org.apache.bahir.cloudant
          |OPTIONS ( database 'n_airportcodemapping')
         """.stripMargin)
@@ -71,8 +79,8 @@ class CloudantAppSuite extends JUnitSuite { self =>
          |WHERE _id >= 'CAA' AND _id <= 'GAA' ORDER BY _id
         """.stripMargin)
     airportData.printSchema()
-    //println(s"Total # of rows in airportData: " + airportData.count()) // scalastyle:ignore
-    assert(airportData.count() === 13)
+    println(s"Total # of rows in airportData: " + airportData.count()) // scalastyle:ignore
+    assert(airportData.count() == 13)
 
     //verify >= 'CAA' ORDER BY _id
     val previous_id = ""
@@ -88,7 +96,7 @@ class CloudantAppSuite extends JUnitSuite { self =>
     airportData.map(t => "code: " + t(0) + ",name:" + t(1)).collect().foreach(println) // scalastyle:ignore
   }
 
-  @Test def totalRowsInflightTable {
+  @Test def totalRowsInFlightTable() {
     // create a temp table from Cloudant index  and query it using sql syntax
     spark.sql(
       s"""

@@ -44,6 +44,6 @@ response = requests.get(url, auth=(test_properties["cloudantusername"], test_pro
 assert response.status_code == 200
 doc_count = response.json().get("doc_count")
 
-print ('About to test com.cloudant.spark for n_customer with setting schemaSampleSize to -1')
-spark.sql(" CREATE TEMPORARY TABLE customerTable USING com.cloudant.spark OPTIONS ( schemaSampleSize '-1',database 'n_customer')")
+print ('About to test org.apache.bahir.cloudant for n_customer with setting schemaSampleSize to -1')
+spark.sql(" CREATE TEMPORARY TABLE customerTable USING org.apache.bahir.cloudant OPTIONS ( schemaSampleSize '-1',database 'n_customer')")
 verify()

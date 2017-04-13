@@ -31,8 +31,8 @@ spark = SparkSession\
     .getOrCreate()
 
 def verifySampleDataCount():
-    print('About to test com.cloudant.spark for n_customer with setting sampleSize to ' + str(sampleSize))
-    customerDataDf = spark.read.load(format="com.cloudant.spark", path="n_customer", sampleSize=str(sampleSize))
+    print('About to test org.apache.bahir.cloudant for n_customer with setting sampleSize to ' + str(sampleSize))
+    customerDataDf = spark.read.load(format="org.apache.bahir.cloudant", path="n_customer", sampleSize=str(sampleSize))
     customerDataDf.cache()
     customerDataDf.printSchema()
     # verify expected count
@@ -41,10 +41,10 @@ def verifySampleDataCount():
 
 
 def verifySampleDataCountWithView():
-    print('About to test com.cloudant.spark for n_flight with setting sampleSize to ' + str(sampleSize) + ' and view')
-    #flightDataDf = spark.read.load(format="com.cloudant.spark", path="n_flight",
+    print('About to test org.apache.bahir.cloudant for n_flight with setting sampleSize to ' + str(sampleSize) + ' and view')
+    #flightDataDf = spark.read.load(format="org.apache.bahir.cloudant", path="n_flight",
     #                             view="_design/view/_view/AA0", sampleSize=str(sampleSize))
-    flightDataDf = spark.read.load(format="com.cloudant.spark", path="n_flight", view="_design/view/_view/AA0", sampleSize=str(sampleSize))
+    flightDataDf = spark.read.load(format="org.apache.bahir.cloudant", path="n_flight", view="_design/view/_view/AA0", sampleSize=str(sampleSize))
     flightDataDf.cache()
     flightDataDf.printSchema()
 
@@ -68,8 +68,8 @@ def verifySampleDataCountWithView():
 
 
 def verifySampleDataWithSampleSchemaSize():
-    print('About to test com.cloudant.spark for n_customer with setting sampleSchemaSize to 2 and sampleSize to ' + str(sampleSize))
-    customerDataDf = spark.read.load(format="com.cloudant.spark", path="n_customer", sampleSize=str(sampleSize),
+    print('About to test org.apache.bahir.cloudant for n_customer with setting sampleSchemaSize to 2 and sampleSize to ' + str(sampleSize))
+    customerDataDf = spark.read.load(format="org.apache.bahir.cloudant", path="n_customer", sampleSize=str(sampleSize),
                                      schemaSampleSize=2)
     customerDataDf.cache()
     customerDataDf.printSchema()

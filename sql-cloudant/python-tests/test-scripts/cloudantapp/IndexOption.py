@@ -52,6 +52,6 @@ assert response.status_code == 200
 total_rows = response.json().get("total_rows")
 
 
-print ('About to test com.cloudant.spark for n_flight with index')
-spark.sql(" CREATE TEMPORARY TABLE flightTable1 USING com.cloudant.spark OPTIONS ( database 'n_flight', index '_design/view/_search/n_flights')")
+print ('About to test org.apache.bahir.cloudant for n_flight with index')
+spark.sql(" CREATE TEMPORARY TABLE flightTable1 USING org.apache.bahir.cloudant OPTIONS ( database 'n_flight', index '_design/view/_search/n_flights')")
 verifyIndexOption()

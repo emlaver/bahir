@@ -44,6 +44,6 @@ def verifyRegCharPredicate():
 		previous_name = name.airportName
 
 			
-print ('About to test com.cloudant.spark for n_airportcodemapping')
-spark.sql("CREATE TEMPORARY TABLE airportTable USING com.cloudant.spark OPTIONS ( database 'n_airportcodemapping')")
+print ('About to test org.apache.bahir.cloudant for n_airportcodemapping')
+spark.sql("CREATE TEMPORARY TABLE airportTable USING org.apache.bahir.cloudant OPTIONS ( database 'n_airportcodemapping')")
 verifyRegCharPredicate()

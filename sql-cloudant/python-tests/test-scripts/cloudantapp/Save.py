@@ -34,13 +34,13 @@ def verifySave():
         .option("createDBOnSave", "false") \
         .save("n_airportcodemapping2")
     time.sleep(5)
-    spark.sql("CREATE TEMPORARY TABLE airportTable2 USING com.cloudant.spark OPTIONS ( database 'n_airportcodemapping2')")
+    spark.sql("CREATE TEMPORARY TABLE airportTable2 USING org.apache.bahir.cloudant OPTIONS ( database 'n_airportcodemapping2')")
 
     # verify that database was created, save and have the same count of data
     airportData2 = spark.sql("SELECT _id, airportName FROM airportTable2")
     assert airportData2.count() == airportData.count()
 
 
-print('About to save test com.cloudant.spark for n_airportcodemapping')
-spark.sql("CREATE TEMPORARY TABLE airportTable USING com.cloudant.spark OPTIONS ( database 'n_airportcodemapping')")
+print('About to save test org.apache.bahir.cloudant for n_airportcodemapping')
+spark.sql("CREATE TEMPORARY TABLE airportTable USING org.apache.bahir.cloudant OPTIONS ( database 'n_airportcodemapping')")
 verifySave()

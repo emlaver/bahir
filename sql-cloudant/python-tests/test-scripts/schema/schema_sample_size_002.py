@@ -27,7 +27,7 @@ spark = SparkSession\
     .config(conf=conf)\
     .getOrCreate()
 
-print ('About to test com.cloudant.spark for n_customer with setting schemaSampleSize to a non-integer string')
-spark.sql(" CREATE TEMPORARY TABLE customerTable USING com.cloudant.spark OPTIONS ( schemaSampleSize 'str',database 'n_customer')")
+print ('About to test org.apache.bahir.cloudant for n_customer with setting schemaSampleSize to a non-integer string')
+spark.sql(" CREATE TEMPORARY TABLE customerTable USING org.apache.bahir.cloudant OPTIONS ( schemaSampleSize 'str',database 'n_customer')")
 customerData = spark.sql("SELECT * FROM customerTable")
 customerData.printSchema()

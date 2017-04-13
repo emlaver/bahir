@@ -27,8 +27,8 @@ spark = SparkSession\
     .config(conf=conf)\
     .getOrCreate()
 
-print ('About to test com.cloudant.spark for n_customer with setting schemaSampleSize to 0')
-spark.sql(" CREATE TEMPORARY TABLE customerTable USING com.cloudant.spark OPTIONS ( schemaSampleSize '0',database 'n_customer')")
+print ('About to test org.apache.bahir.cloudant for n_customer with setting schemaSampleSize to 0')
+spark.sql(" CREATE TEMPORARY TABLE customerTable USING org.apache.bahir.cloudant OPTIONS ( schemaSampleSize '0',database 'n_customer')")
 customerData = spark.sql("SELECT * FROM customerTable")
 customerData.printSchema()
 

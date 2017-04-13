@@ -54,6 +54,6 @@ if total_rows == 0:
 	warnings.warn("No data for uid0@email.com in the n_booking database!")
 
 
-print ('About to test com.cloudant.spark for n_booking')
-spark.sql(" CREATE TEMPORARY TABLE bookingTable1 USING com.cloudant.spark OPTIONS ( database 'n_booking')")
+print ('About to test org.apache.bahir.cloudant for n_booking')
+spark.sql(" CREATE TEMPORARY TABLE bookingTable1 USING org.apache.bahir.cloudant OPTIONS ( database 'n_booking')")
 verifySpecCharValuePredicate()

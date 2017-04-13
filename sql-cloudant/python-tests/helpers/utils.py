@@ -19,8 +19,6 @@ import os
 
 import sys
 
-import conftest
-
 app_script_dir = 'test-scripts/cloudantapp'
 schema_script_dir = 'test-scripts/schema'
 script_dir = None
@@ -42,14 +40,16 @@ class Utils(object):
 
         return os.path.join(self.scripts_path, self.script_dir, script_name)
 
-    def run_test(self, in_script):
-        __tracebackhide__ = True
+    def run_test(self, in_script, **kwargs):
+        #__tracebackhide__ = True
 
         # spark-submit the script
-        import os, sys
-        #command = [sparksubmit]
-        command = self.sparksubmit()
+        if kwargs.get('sparksubmit', None) is not None:
+            command = [kwargs.get('sparksubmit', None)]
+        else:
+            command = [self.sparksubmit()]
         command.extend(["--master", "local[4]", "--jars", os.environ["CONNECTOR_JAR"], str(in_script)])
+        print(str(command))
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         err, out = proc.communicate()
         if self.schema_tests:
@@ -63,8 +63,8 @@ class Utils(object):
             if proc.returncode != 0:
                 pytest.fail(err.decode(encoding='UTF-8'))
 
+
     def sparksubmit(self):
-        print('spark submit call')
         try:
             sys.path.append(os.path.join(os.environ["SPARK_HOME"], "python"))
             sys.path.append(os.path.join(os.environ["SPARK_HOME"], "python", "lib", "py4j-0.8.2.1-src.zip"))
@@ -77,35 +77,11 @@ class Utils(object):
 
 def createSparkConf():
     from pyspark import SparkConf
-    test_properties = conftest.test_properties()
+    #test_properties = conftest.test_properties()
 
     conf = SparkConf()
-    conf.set("cloudant.host", test_properties["cloudanthost"])
-    conf.set("cloudant.username", test_properties["cloudantusername"])
-    conf.set("cloudant.password", test_properties["cloudantpassword"])
+    conf.set("cloudant.host", os.environ.get('CLOUDANT_ACCOUNT'))
+    conf.set("cloudant.username", os.environ.get('CLOUDANT_USER'))
+    conf.set("cloudant.password", os.environ.get('CLOUDANT_PASSWORD'))
 
     return conf
-
-
-def get_test_properties():
-    return conftest.test_properties()
-
-
-"""
-def run_sample_test(in_script):
-    __tracebackhide__ = True
-
-    # spark-submit the script
-    import os, sys
-    command = [sparksubmit]
-    command.extend(["--master", "local[4]", "--jars", os.environ["CONNECTOR_JAR"], str(in_script)])
-    proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    err, out = proc.communicate()
-    # print spark log and stdout (when  py.test -s is used)
-    # spark log is in stdout while test output is in stderr
-    print(out.decode(encoding='UTF-8'))
-    print(err.decode(encoding='UTF-8'))
-
-    if proc.returncode != 0:
-        pytest.fail(err.decode(encoding='UTF-8'))
-"""
