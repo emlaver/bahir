@@ -32,7 +32,7 @@ class FilterInterpreter(origFilters: Array[Filter]) {
 
   private val logger = LoggerFactory.getLogger(getClass)
 
-  lazy val firstField = {
+  lazy val firstField: String = {
     if (origFilters.length > 0) getFilterAttribute(origFilters(0))
     else null
   }

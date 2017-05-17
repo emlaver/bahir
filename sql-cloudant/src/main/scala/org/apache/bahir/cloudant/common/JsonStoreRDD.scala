@@ -35,7 +35,7 @@ private[cloudant] class JsonStoreRDDPartition(val skip: Int, val limit: Int,
     val idx: Int, val config: CloudantConfig,
     val attrToFilters: Map[String, Array[Filter]])
     extends Partition with Serializable{
-  val index = idx
+  val index: Int = idx
 }
 
 /**
@@ -51,10 +51,10 @@ class JsonStoreRDD(sc: SparkContext, config: CloudantConfig,
     attrToFilters: Map[String, Array[Filter]] = null)
   extends RDD[String](sc, Nil) {
 
-  lazy val totalRows = {
+  lazy val totalRows: Int = {
       new JsonStoreDataAccess(config).getTotalRows(url)
   }
-  lazy val totalPartition = {
+  lazy val totalPartition: Int = {
     if (totalRows == 0 || ! config.allowPartition() )  1
     else if (totalRows < config.partitions * config.minInPartition) {
       val total = totalRows / config.minInPartition
@@ -76,7 +76,7 @@ class JsonStoreRDD(sc: SparkContext, config: CloudantConfig,
     }
   }
 
-  lazy val limitPerPartition = {
+  lazy val limitPerPartition: Int = {
     val limit = totalRows/totalPartition
     if (totalRows % totalPartition != 0) {
       limit + 1

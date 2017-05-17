@@ -16,7 +16,7 @@
  */
 package org.apache.bahir.cloudant.common
 
-import play.api.libs.json.{JsUndefined, JsValue}
+import play.api.libs.json.JsValue
 import scala.util.control.Breaks._
 
 object JsonUtil {

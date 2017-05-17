@@ -466,6 +466,7 @@
               <exclude>**/*.iml</exclude>
               <exclude>**/src/main/resources/application.conf</exclude>
               <exclude>**/src/main/resources/reference.conf</exclude>
+              <exclude>**/python-tests/**</exclude>
             </excludes>
           </configuration>
         </plugin>

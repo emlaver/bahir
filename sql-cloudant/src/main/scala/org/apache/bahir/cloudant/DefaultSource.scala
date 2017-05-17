@@ -16,7 +16,7 @@
  */
 package org.apache.bahir.cloudant
 
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
@@ -25,15 +25,16 @@ import org.apache.spark.sql.types._
 
 import org.apache.bahir.cloudant.common.{FilterInterpreter, JsonStoreDataAccess, JsonStoreRDD, _}
 
+
 case class CloudantReadWriteRelation (config: CloudantConfig,
                                       schema: StructType,
                                       allDocsDF: DataFrame = null)
                       (@transient val sqlContext: SQLContext)
   extends BaseRelation with PrunedFilteredScan  with InsertableRelation {
 
-   @transient lazy val dataAccess = {new JsonStoreDataAccess(config)}
+   @transient lazy val dataAccess: JsonStoreDataAccess = {new JsonStoreDataAccess(config)}
 
-    implicit lazy val logger = LoggerFactory.getLogger(getClass)
+    implicit lazy val logger: Logger = LoggerFactory.getLogger(getClass)
 
     def buildScan(requiredColumns: Array[String],
                 filters: Array[Filter]): RDD[Row] = {
@@ -78,12 +79,12 @@ case class CloudantReadWriteRelation (config: CloudantConfig,
 
 
   def insert(data: DataFrame, overwrite: Boolean): Unit = {
-      if (config.getCreateDBonSave()) {
+      if (config.getCreateDBonSave) {
         dataAccess.createDB()
       }
       if (data.count() == 0) {
-        logger.warn(("Database " + config.getDbname() +
-          ": nothing was saved because the number of records was 0!"))
+        logger.warn("Database " + config.getDbname +
+          ": nothing was saved because the number of records was 0!")
       } else {
         val result = data.toJSON.foreachPartition { x =>
           val list = x.toList // Has to pass as List, Iterator results in 0 data
@@ -97,7 +98,7 @@ class DefaultSource extends RelationProvider
   with CreatableRelationProvider
   with SchemaRelationProvider {
 
-  val logger = LoggerFactory.getLogger(getClass)
+  val logger: Logger = LoggerFactory.getLogger(getClass)
 
   def createRelation(sqlContext: SQLContext,
                      parameters: Map[String, String]): CloudantReadWriteRelation = {
@@ -116,7 +117,7 @@ class DefaultSource extends RelationProvider
         if (inSchema != null) {
           inSchema
         } else {
-          val df = if (config.getSchemaSampleSize() ==
+          val df = if (config.getSchemaSampleSize ==
             JsonStoreConfigManager.SCHEMA_FOR_ALL_DOCS_NUM &&
             config.viewName == null
             && config.indexName == null) {
@@ -132,7 +133,7 @@ class DefaultSource extends RelationProvider
           } else {
             val dataAccess = new JsonStoreDataAccess(config)
             val aRDD = sqlContext.sparkContext.parallelize(
-                dataAccess.getMany(config.getSchemaSampleSize()))
+                dataAccess.getMany(config.getSchemaSampleSize))
             sqlContext.read.json(aRDD)
           }
           df.schema

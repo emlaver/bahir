@@ -25,7 +25,7 @@ import org.apache.bahir.cloudant.CloudantConfig
 
  object JsonStoreConfigManager {
   val CLOUDANT_CONNECTOR_VERSION = "2.0.0"
-  val SCHEMA_FOR_ALL_DOCS_NUM = -1
+  val SCHEMA_FOR_ALL_DOCS_NUM: Int = -1
 
   private val CLOUDANT_HOST_CONFIG = "cloudant.host"
   private val CLOUDANT_USERNAME_CONFIG = "cloudant.username"

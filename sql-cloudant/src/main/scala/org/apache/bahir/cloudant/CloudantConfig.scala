@@ -44,11 +44,11 @@ class CloudantConfig(val protocol: String, val host: String,
   val defaultIndex = "_all_docs" // "_changes" does not work for partition
   val default_filter: String = "*:*"
 
-  def getChangesUrl(): String = {
+  def getChangesUrl: String = {
     dbUrl + "/_changes?include_docs=true&feed=normal"
   }
 
-  def getContinuousChangesUrl(): String = {
+  def getContinuousChangesUrl: String = {
     var url = dbUrl + "/_changes?include_docs=true&feed=continuous&heartbeat=3000"
     if (selector != null) {
       url = url + "&filter=_selector"
@@ -56,11 +56,11 @@ class CloudantConfig(val protocol: String, val host: String,
     url
   }
 
-  def getSelector() : String = {
+  def getSelector : String = {
     selector
   }
 
-  def getDbUrl(): String = {
+  def getDbUrl: String = {
     dbUrl
   }
 
@@ -69,11 +69,11 @@ class CloudantConfig(val protocol: String, val host: String,
     else s"$dbUrl/$defaultIndex?limit=$skip"
   }
 
-  def getSchemaSampleSize(): Int = {
+  def getSchemaSampleSize: Int = {
     schemaSampleSize
   }
 
-  def getCreateDBonSave(): Boolean = {
+  def getCreateDBonSave: Boolean = {
     createDBOnSave
   }
 
@@ -87,21 +87,21 @@ class CloudantConfig(val protocol: String, val host: String,
     }
   }
 
-  def getDbname(): String = {
+  def getDbname: String = {
     dbName
   }
 
   def allowPartition(): Boolean = {indexName==null}
 
-  def getOneUrl(): String = {
+  def getOneUrl: String = {
     dbUrl + "/_all_docs?limit=1&include_docs=true"
   }
 
-  def getOneUrlExcludeDDoc1(): String = {
+  def getOneUrlExcludeDDoc1: String = {
     dbUrl + "/_all_docs?endkey=%22_design/%22&limit=1&include_docs=true"
   }
 
-  def getOneUrlExcludeDDoc2(): String = {
+  def getOneUrlExcludeDDoc2: String = {
     dbUrl + "/_all_docs?startkey=%22_design0/%22&limit=1&include_docs=true"
   }
 
@@ -151,11 +151,11 @@ class CloudantConfig(val protocol: String, val host: String,
     if (field != null && field.equals(pkField)) {
       var condition = ""
       if (start != null && end != null && start.equals(end)) {
-        condition += "?key=%22" + URLEncoder.encode(start.toString(), "UTF-8") + "%22"
+        condition += "?key=%22" + URLEncoder.encode(start.toString, "UTF-8") + "%22"
       } else {
         if (start != null) {
           condition += "?startkey=%22" + URLEncoder.encode(
-              start.toString(), "UTF-8") + "%22"
+              start.toString, "UTF-8") + "%22"
         }
         if (end != null) {
           if (start != null) {
@@ -163,7 +163,7 @@ class CloudantConfig(val protocol: String, val host: String,
           } else {
             condition += "?"
           }
-          condition += "endkey=%22" + URLEncoder.encode(end.toString(), "UTF-8") + "%22"
+          condition += "endkey=%22" + URLEncoder.encode(end.toString, "UTF-8") + "%22"
         }
       }
       (dbUrl + "/_all_docs" + condition, true)
@@ -248,13 +248,13 @@ class CloudantConfig(val protocol: String, val host: String,
 
   def getRows(result: JsValue): Seq[JsValue] = {
     if (viewName == null) {
-      ((result \ "rows").as[JsArray]).value.map(row => (row \ "doc").get)
+      (result \ "rows").as[JsArray].value.map(row => (row \ "doc").get)
     } else {
-      ((result \ "rows").as[JsArray]).value.map(row => row)
+      (result \ "rows").as[JsArray].value.map(row => row)
     }
   }
 
-  def getBulkPostUrl(): String = {
+  def getBulkPostUrl: String = {
     dbUrl + "/_bulk_docs"
   }
 
@@ -263,11 +263,11 @@ class CloudantConfig(val protocol: String, val host: String,
     Json.stringify(Json.obj("docs" -> Json.toJson(docs.toSeq)))
   }
 
-  def getConflictErrStr(): String = {
+  def getConflictErrStr: String = {
     """"error":"conflict""""
   }
 
-  def getForbiddenErrStr(): String = {
+  def getForbiddenErrStr: String = {
     """"error":"forbidden""""
   }
 }

@@ -43,9 +43,9 @@ class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String]
   }
 
   private def receive(): Unit = {
-    val url = config.getContinuousChangesUrl()
-    val selector: String = if (config.getSelector() != null) {
-      "{\"selector\":" + config.getSelector() + "}"
+    val url = config.getContinuousChangesUrl.toString
+    val selector: String = if (config.getSelector != null) {
+      "{\"selector\":" + config.getSelector + "}"
     } else {
       "{}"
     }
@@ -78,7 +78,7 @@ class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String]
         })
       } else {
         val status = headers.getOrElse("Status", IndexedSeq.empty)
-        val errorMsg = "Error retrieving _changes feed " + config.getDbname() + ": " + status(0)
+        val errorMsg = "Error retrieving _changes feed " + config.getDbname + ": " + status(0)
         reportError(errorMsg, new RuntimeException(errorMsg))
       }
     })
