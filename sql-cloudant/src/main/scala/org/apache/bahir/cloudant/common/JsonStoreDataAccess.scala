@@ -72,11 +72,11 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
     }
   }
 
-  def getAll[T](url: String)
+  /* def getAll[T](url: String)
       (implicit columns: Array[String] = null,
       attrToFilters: Map[String, Array[Filter]] = null): Seq[String] = {
     this.getQueryResult[Seq[String]](url, processAll)
-  }
+  } */
 
   def getIterator(skip: Int, limit: Int, url: String)
       (implicit columns: Array[String] = null,
@@ -143,13 +143,17 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
       attrToFilters: Map[String, Array[Filter]] = null) : T = {
     logger.warn("Loading data from Cloudant using query: " + url)
     val requestTimeout = config.requestTimeout.toInt
+    // Use selector to filter out design docs
+    val selector: String = "{\"selector\": { \"_id\": { \"$regex\": \"^(?!.*_design\/)\" } }}"
     val clRequest: HttpRequest = config.username match {
       case null =>
         Http(url)
+            .postData(selector)
             .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
             .header("User-Agent", "spark-cloudant")
       case _ =>
         Http(url)
+            .postData(selector)
             .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
             .header("User-Agent", "spark-cloudant")
             .auth(config.username, config.password)

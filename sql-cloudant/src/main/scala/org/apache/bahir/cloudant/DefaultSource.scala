@@ -113,6 +113,8 @@ class DefaultSource extends RelationProvider
 
       var allDocsDF: DataFrame = null
 
+      var changesDF: DataFrame = null // WIP for implementing _changes in DF
+
       val schema: StructType = {
         if (inSchema != null) {
           inSchema

@@ -41,7 +41,7 @@ class CloudantConfig(val protocol: String, val host: String,
   private lazy val dbUrl = {protocol + "://" + host + "/" + dbName}
 
   val pkField = "_id"
-  val defaultIndex = "_all_docs" // "_changes" does not work for partition
+  val defaultIndex = "_changes" // TODO: "_changes" does not work for partition
   val default_filter: String = "*:*"
 
   def getChangesUrl: String = {
@@ -65,8 +65,11 @@ class CloudantConfig(val protocol: String, val host: String,
   }
 
   def getLastUrl(skip: Int): String = {
-    if (skip ==0 ) null
-    else s"$dbUrl/$defaultIndex?limit=$skip"
+    if (skip == 0) {
+      null
+    } else {
+      s"$dbUrl/$defaultIndex?feed=normal&limit=$skip"
+    }
   }
 
   def getSchemaSampleSize: Int = {
@@ -94,15 +97,15 @@ class CloudantConfig(val protocol: String, val host: String,
   def allowPartition(): Boolean = {indexName==null}
 
   def getOneUrl: String = {
-    dbUrl + "/_all_docs?limit=1&include_docs=true"
+    dbUrl + "/_changes?limit=1&include_docs=true"
   }
 
   def getOneUrlExcludeDDoc1: String = {
-    dbUrl + "/_all_docs?endkey=%22_design/%22&limit=1&include_docs=true"
+    dbUrl + "/_changes?include_docs=true&?filter=_selector" // _changes
   }
 
   def getOneUrlExcludeDDoc2: String = {
-    dbUrl + "/_all_docs?startkey=%22_design0/%22&limit=1&include_docs=true"
+    dbUrl + "/_changes?include_docs=true&?filter=_selector"  // _changes
   }
 
   def getAllDocsUrlExcludeDDoc(limit: Int): String = {
