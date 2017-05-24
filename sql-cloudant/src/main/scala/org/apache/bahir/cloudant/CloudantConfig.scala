@@ -101,16 +101,16 @@ class CloudantConfig(val protocol: String, val host: String,
   }
 
   def getOneUrlExcludeDDoc1: String = {
-    dbUrl + "/_changes?include_docs=true&?filter=_selector" // _changes
+    dbUrl + "/_changes?include_docs=true&filter=_selector" // _changes
   }
 
   def getOneUrlExcludeDDoc2: String = {
-    dbUrl + "/_changes?include_docs=true&?filter=_selector"  // _changes
+    dbUrl + "/_changes?include_docs=true&filter=_selector"  // _changes
   }
 
   def getAllDocsUrlExcludeDDoc(limit: Int): String = {
     if (viewName == null) {
-      dbUrl + "/_all_docs?startkey=%22_design0/%22&limit=" + limit + "&include_docs=true"
+      dbUrl + "/_changes?limit=" + limit + "&include_docs=true&filter=_selector"
     } else {
       dbUrl + "/" + viewName + "?limit=1"
     }
@@ -119,9 +119,9 @@ class CloudantConfig(val protocol: String, val host: String,
   def getAllDocsUrl(limit: Int): String = {
     if (viewName == null) {
       if (limit == SCHEMA_FOR_ALL_DOCS_NUM) {
-        dbUrl + "/_all_docs?include_docs=true"
+        dbUrl + "/_changes?include_docs=true&filter=_selector"
       } else {
-        dbUrl + "/_all_docs?limit=" + limit + "&include_docs=true"
+        dbUrl + "/_changes?limit=" + limit + "&include_docs=true&filter=_selector"
       }
     } else {
       if (limit == JsonStoreConfigManager.SCHEMA_FOR_ALL_DOCS_NUM) {
@@ -251,7 +251,8 @@ class CloudantConfig(val protocol: String, val host: String,
 
   def getRows(result: JsValue): Seq[JsValue] = {
     if (viewName == null) {
-      (result \ "rows").as[JsArray].value.map(row => (row \ "doc").get)
+      // (result \ "rows").as[JsArray].value.map(row => (row \ "doc").get)
+      (result \ "results").as[JsArray].value.map(row => (row \ "doc").get)
     } else {
       (result \ "rows").as[JsArray].value.map(row => row)
     }

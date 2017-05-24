@@ -144,18 +144,24 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
     logger.warn("Loading data from Cloudant using query: " + url)
     val requestTimeout = config.requestTimeout.toInt
     // Use selector to filter out design docs
-    val selector: String = "{\"selector\": { \"_id\": { \"$regex\": \"^(?!.*_design\/)\" } }}"
+    val selector: String = if (url.contains("filter=_selector")) {
+      "{\"selector\": { \"_id\": { \"$regex\": \"^(?!.*_design/)\" } }}"
+    } else {
+      "{}"
+    }
     val clRequest: HttpRequest = config.username match {
       case null =>
         Http(url)
             .postData(selector)
             .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
+            .header("Content-Type", "application/json")
             .header("User-Agent", "spark-cloudant")
       case _ =>
         Http(url)
             .postData(selector)
             .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
             .header("User-Agent", "spark-cloudant")
+            .header("Content-Type", "application/json")
             .auth(config.username, config.password)
     }
 
