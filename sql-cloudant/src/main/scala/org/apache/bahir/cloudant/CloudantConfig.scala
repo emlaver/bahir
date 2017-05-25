@@ -18,9 +18,7 @@ package org.apache.bahir.cloudant
 
 import java.net.URLEncoder
 
-import play.api.libs.json.JsArray
-import play.api.libs.json.Json
-import play.api.libs.json.JsValue
+import play.api.libs.json.{JsArray, JsObject, Json, JsValue}
 
 import org.apache.bahir.cloudant.common._
 
@@ -250,7 +248,8 @@ class CloudantConfig(val protocol: String, val host: String,
   }
 
   def getRows(result: JsValue): Seq[JsValue] = {
-    if (viewName == null) {
+    val containsResultsKey: Boolean = result.as[JsObject].keys.contains("results")
+    if (viewName == null && containsResultsKey) {
       // (result \ "rows").as[JsArray].value.map(row => (row \ "doc").get)
       (result \ "results").as[JsArray].value.map(row => (row \ "doc").get)
     } else {

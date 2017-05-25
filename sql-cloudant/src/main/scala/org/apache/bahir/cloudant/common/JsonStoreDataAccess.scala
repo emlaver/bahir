@@ -136,45 +136,54 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
     getQueryResult(url, processResults)
   }
 
-
   private def getQueryResult[T]
-      (url: String, postProcessor: (String) => T)
-      (implicit columns: Array[String] = null,
-      attrToFilters: Map[String, Array[Filter]] = null) : T = {
+  (url: String, postProcessor: (String) => T)
+  (implicit columns: Array[String] = null,
+   attrToFilters: Map[String, Array[Filter]] = null) : T = {
     logger.warn("Loading data from Cloudant using query: " + url)
     val requestTimeout = config.requestTimeout.toInt
-    // Use selector to filter out design docs
-    val selector: String = if (url.contains("filter=_selector")) {
-      "{\"selector\": { \"_id\": { \"$regex\": \"^(?!.*_design/)\" } }}"
-    } else {
-      "{}"
-    }
+    // Selector for filtering out design docs in _changes feed
+    val selector: String = "{\"selector\": { \"_id\": { \"$regex\": \"^(?!.*_design/)\" } }}"
     val clRequest: HttpRequest = config.username match {
       case null =>
-        Http(url)
+        if (url.contains("filter=_selector")) {
+          Http(url)
             .postData(selector)
             .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
             .header("Content-Type", "application/json")
             .header("User-Agent", "spark-cloudant")
+        } else {
+          Http(url)
+            .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
+            .header("Content-Type", "application/json")
+            .header("User-Agent", "spark-cloudant")
+        }
       case _ =>
-        Http(url)
+        if (url.contains("filter=_selector")) {
+          Http(url)
             .postData(selector)
             .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-            .header("User-Agent", "spark-cloudant")
             .header("Content-Type", "application/json")
+            .header("User-Agent", "spark-cloudant")
             .auth(config.username, config.password)
+        } else {
+          Http(url)
+            .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
+            .header("Content-Type", "application/json")
+            .header("User-Agent", "spark-cloudant")
+            .auth(config.username, config.password)
+        }
     }
 
     val clResponse: HttpResponse[String] = clRequest.execute()
     if (! clResponse.isSuccess) {
       throw new RuntimeException("Database " + config.getDbname +
-          " request error: " + clResponse.body)
+        " request error: " + clResponse.body)
     }
     val data = postProcessor(clResponse.body)
     logger.debug(s"got result:$data")
     data
   }
-
 
   def createDB(): Unit = {
     val url = config.getDbUrl.toString
