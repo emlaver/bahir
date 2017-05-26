@@ -238,20 +238,22 @@ class CloudantConfig(val protocol: String, val host: String,
   }
 
   def getTotalRows(result: JsValue): Int = {
-    val tr = (result \ "total_rows").asOpt[Int]
-    tr match {
-      case None =>
-        (result \ "pending").as[Int] + 1
-      case Some(tr2) =>
-        tr2
+    val resultKeys = result.as[JsObject].keys
+    if(resultKeys.contains("total_rows")) {
+      (result \ "total_rows").as[Int]
+    } else if (resultKeys.contains("pending")) {
+      (result \ "pending").as[Int] + 1
+    } else {
+      1
     }
   }
 
   def getRows(result: JsValue): Seq[JsValue] = {
     val containsResultsKey: Boolean = result.as[JsObject].keys.contains("results")
-    if (viewName == null && containsResultsKey) {
-      // (result \ "rows").as[JsArray].value.map(row => (row \ "doc").get)
+    if (containsResultsKey) {
       (result \ "results").as[JsArray].value.map(row => (row \ "doc").get)
+    } else if (viewName == null) {
+      (result \ "rows").as[JsArray].value.map(row => (row \ "doc").get)
     } else {
       (result \ "rows").as[JsArray].value.map(row => row)
     }

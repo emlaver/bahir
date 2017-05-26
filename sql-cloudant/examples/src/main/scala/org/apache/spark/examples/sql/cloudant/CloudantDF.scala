@@ -17,10 +17,7 @@
 
 package org.apache.spark.examples.sql.cloudant
 
-import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.SQLContext
-import org.apache.spark.storage.StorageLevel
 
 object CloudantDF{
   def main(args: Array[String]) {
@@ -60,5 +57,20 @@ object CloudantDF{
       .option("view", "_design/view/_view/AA0").load("n_flight")
     df4.printSchema()
     df4.show()
+
+    // 5. Loading data from a view with map and reduce
+    // Loading data from Cloudant db
+    val df5 = spark.read.format("org.apache.bahir.cloudant")
+      .option("view", "_design/view/_view/AAreduce?reduce=true")
+      .load("n_flight")
+    df5.printSchema()
+    df5.show()
+
+    // 6. Loading data from a view with map, and reduce using grouping
+    val df6 = spark.read.format("org.apache.bahir.cloudant")
+      .option("view", "_design/view/_view/AAreduce?reduce=true&group=true")
+      .load("n_flight")
+    df6.printSchema()
+    df6.show()
   }
 }

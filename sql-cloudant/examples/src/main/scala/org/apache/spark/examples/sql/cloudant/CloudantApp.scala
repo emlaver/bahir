@@ -17,9 +17,7 @@
 
 package org.apache.spark.examples.sql.cloudant
 
-import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.SQLContext
 
 object CloudantApp {
   def main(args: Array[String]) {
@@ -68,6 +66,6 @@ object CloudantApp {
         """.stripMargin)
     flightData.printSchema()
     flightData.map(t => "flightSegmentId: " + t(0) + ", scheduledDepartureTime: " + t(1))
-                   .collect().foreach(println) // scalastyle:ignore
+      .collect().foreach(println) // scalastyle:ignore
   }
 }
