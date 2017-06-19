@@ -16,7 +16,7 @@
  */
 package org.apache.bahir.cloudant
 
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
@@ -27,26 +27,26 @@ import org.apache.bahir.cloudant.common.{JsonStoreDataAccess, JsonStoreRDD, _}
 
 case class CloudantReadWriteRelation (config: CloudantConfig,
                                       schema: StructType,
-                                      allDocsDF: DataFrame = null)
+                                      dataFrame: DataFrame = null)
                       (@transient val sqlContext: SQLContext)
   extends BaseRelation with PrunedFilteredScan  with InsertableRelation {
 
-   @transient lazy val dataAccess = {new JsonStoreDataAccess(config)}
+   @transient lazy val dataAccess: JsonStoreDataAccess = {new JsonStoreDataAccess(config)}
 
-    implicit lazy val logger = LoggerFactory.getLogger(getClass)
+    implicit lazy val logger: Logger = LoggerFactory.getLogger(getClass)
 
     def buildScan(requiredColumns: Array[String],
                 filters: Array[Filter]): RDD[Row] = {
       val colsLength = requiredColumns.length
 
-      if (allDocsDF != null) {
+      if (dataFrame != null) {
         if (colsLength == 0) {
-          allDocsDF.select().rdd
+          dataFrame.select().rdd
         } else if (colsLength == 1) {
-          allDocsDF.select(requiredColumns(0)).rdd
+          dataFrame.select(requiredColumns(0)).rdd
         } else {
           val colsExceptCol0 = for (i <- 1 until colsLength) yield requiredColumns(i)
-          allDocsDF.select(requiredColumns(0), colsExceptCol0: _*).rdd
+          dataFrame.select(requiredColumns(0), colsExceptCol0: _*).rdd
         }
       } else {
         implicit val columns : Array[String] = requiredColumns
@@ -66,12 +66,12 @@ case class CloudantReadWriteRelation (config: CloudantConfig,
 
 
   def insert(data: DataFrame, overwrite: Boolean): Unit = {
-      if (config.getCreateDBonSave()) {
+      if (config.getCreateDBonSave) {
         dataAccess.createDB()
       }
       if (data.count() == 0) {
-        logger.warn(("Database " + config.getDbname() +
-          ": nothing was saved because the number of records was 0!"))
+        logger.warn("Database " + config.getDbname +
+          ": nothing was saved because the number of records was 0!")
       } else {
         val result = data.toJSON.foreachPartition { x =>
           val list = x.toList // Has to pass as List, Iterator results in 0 data
@@ -85,7 +85,7 @@ class DefaultSource extends RelationProvider
   with CreatableRelationProvider
   with SchemaRelationProvider {
 
-  val logger = LoggerFactory.getLogger(getClass)
+  val logger: Logger = LoggerFactory.getLogger(getClass)
 
   def createRelation(sqlContext: SQLContext,
                      parameters: Map[String, String]): CloudantReadWriteRelation = {
@@ -98,29 +98,29 @@ class DefaultSource extends RelationProvider
 
       val config: CloudantConfig = JsonStoreConfigManager.getConfig(sqlContext, parameters)
 
-      var allDocsDF: DataFrame = null
+      var dataFrame: DataFrame = null
 
       val schema: StructType = {
         if (inSchema != null) {
           inSchema
         } else {
-          val df = if (config.getSchemaSampleSize() ==
-            JsonStoreConfigManager.ALL_DOCS_LIMIT &&
+          val df = if (config.getSchemaSampleSize ==
+            JsonStoreConfigManager.ALLDOCS_OR_CHANGES_LIMIT &&
             config.viewName == null
             && config.indexName == null) {
             val cloudantRDD = new JsonStoreRDD(sqlContext.sparkContext, config)
-            allDocsDF = sqlContext.read.json(cloudantRDD)
-            allDocsDF
+            dataFrame = sqlContext.read.json(cloudantRDD)
+            dataFrame
           } else {
             val dataAccess = new JsonStoreDataAccess(config)
             val aRDD = sqlContext.sparkContext.parallelize(
-                dataAccess.getMany(config.getSchemaSampleSize()))
+                dataAccess.getMany(config.getSchemaSampleSize))
             sqlContext.read.json(aRDD)
           }
           df.schema
         }
       }
-      CloudantReadWriteRelation(config, schema, allDocsDF)(sqlContext)
+      CloudantReadWriteRelation(config, schema, dataFrame)(sqlContext)
     }
 
     def createRelation(sqlContext: SQLContext,

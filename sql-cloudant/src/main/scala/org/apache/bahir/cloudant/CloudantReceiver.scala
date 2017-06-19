@@ -16,23 +16,20 @@
  */
 package org.apache.bahir.cloudant
 
-// scalastyle:off
+import play.api.libs.json.Json
 import scalaj.http._
 
-import play.api.libs.json.Json
-
+import org.apache.spark.SparkConf
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.receiver.Receiver
-import org.apache.spark.SparkConf
 
 import org.apache.bahir.cloudant.common._
-// scalastyle:on
 
 class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String])
     extends Receiver[String](StorageLevel.MEMORY_AND_DISK) {
-  lazy val config: CloudantConfig = {
+  lazy val config: CloudantChangesConfig = {
     JsonStoreConfigManager.getConfig(sparkConf, cloudantParams)
-      .asInstanceOf[CloudantConfig]
+      .asInstanceOf[CloudantChangesConfig]
   }
 
   def onStart() {
@@ -43,9 +40,9 @@ class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String]
   }
 
   private def receive(): Unit = {
-    val url = config.getContinuousChangesUrl()
-    val selector: String = if (config.getSelector() != null) {
-      "{\"selector\":" + config.getSelector() + "}"
+    val url = config.getContinuousChangesUrl.toString
+    val selector: String = if (config.getSelector != null) {
+      "{\"selector\":" + config.getSelector + "}"
     } else {
       "{}"
     }
@@ -78,13 +75,12 @@ class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String]
         })
       } else {
         val status = headers.getOrElse("Status", IndexedSeq.empty)
-        val errorMsg = "Error retrieving _changes feed " + config.getDbname() + ": " + status(0)
+        val errorMsg = "Error retrieving _changes feed " + config.getDbname + ": " + status(0)
         reportError(errorMsg, new RuntimeException(errorMsg))
       }
     })
   }
 
   def onStop(): Unit = {
-
   }
 }
