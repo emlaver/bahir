@@ -32,7 +32,7 @@ object CloudantStreaming {
     val ssc = new StreamingContext(sparkConf, Seconds(10))
 
     val changes = ssc.receiverStream(new CloudantReceiver(sparkConf, Map(
-      "cloudant.host" -> "ACCOUNT.cloudant.com",
+      "cloudant.host" -> "ACCOUNT.cloudant.com", //Or localhost:5984 for local Couchdb
       "cloudant.username" -> "USERNAME",
       "cloudant.password" -> "PASSWORD",
       "database" -> "n_airportcodemapping")))

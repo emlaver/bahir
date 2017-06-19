@@ -23,9 +23,14 @@ import org.apache.spark.SparkConf
 
 import org.apache.bahir.cloudant.CloudantConfig
 
- object JsonStoreConfigManager {
+object JsonStoreConfigManager {
   val CLOUDANT_CONNECTOR_VERSION = "2.0.0"
   val ALL_DOCS_LIMIT = -1
+
+  private val COUCHDB_HOST_CONFIG = "couchdb.host"
+  private val COUCHDB_USERNAME_CONFIG = "couchdb.username"
+  private val COUCHDB_PASSWORD_CONFIG = "couchdb.password"
+  private val COUCHDB_PROTOCOL_CONFIG = "couchdb.protocol"
 
   private val CLOUDANT_HOST_CONFIG = "cloudant.host"
   private val CLOUDANT_USERNAME_CONFIG = "cloudant.username"
@@ -50,17 +55,17 @@ import org.apache.bahir.cloudant.CloudantConfig
 
 
   /**
-   * The sequence of getting configuration
-   * 1. "spark."+key in the SparkConf
-   *  (as they are treated as the one passed in through spark-submit)
-   * 2. key in the parameters, which is set in DF option
-   * 3. key in the SparkConf, which is set in SparkConf
-   * 4. default in the Config, which is set in the application.conf
-   */
+    * The sequence of getting configuration
+    * 1. "spark."+key in the SparkConf
+    *  (as they are treated as the one passed in through spark-submit)
+    * 2. key in the parameters, which is set in DF option
+    * 3. key in the SparkConf, which is set in SparkConf
+    * 4. default in the Config, which is set in the application.conf
+    */
 
 
   private def getInt(sparkConf: SparkConf, parameters: Map[String, String],
-      key: String) : Int = {
+                     key: String) : Int = {
     val valueS = parameters.getOrElse(key, null)
     if (sparkConf != null) {
       val default = {
@@ -81,7 +86,7 @@ import org.apache.bahir.cloudant.CloudantConfig
   }
 
   private def getLong(sparkConf: SparkConf, parameters: Map[String, String],
-      key: String) : Long = {
+                      key: String) : Long = {
     val valueS = parameters.getOrElse(key, null)
     if (sparkConf != null) {
       val default = {
@@ -98,7 +103,7 @@ import org.apache.bahir.cloudant.CloudantConfig
   }
 
   private def getString(sparkConf: SparkConf, parameters: Map[String, String],
-      key: String) : String = {
+                        key: String) : String = {
     val defaultInConfig = if (rootConfig.hasPath(key)) rootConfig.getString(key) else null
     val valueS = parameters.getOrElse(key, null)
     if (sparkConf != null) {
@@ -116,7 +121,7 @@ import org.apache.bahir.cloudant.CloudantConfig
   }
 
   private def getBool(sparkConf: SparkConf, parameters: Map[String, String],
-      key: String) : Boolean = {
+                      key: String) : Boolean = {
     val valueS = parameters.getOrElse(key, null)
     if (sparkConf != null) {
       val default = {
@@ -173,6 +178,6 @@ import org.apache.bahir.cloudant.CloudantConfig
     } else {
       throw new RuntimeException("Spark configuration is invalid! " +
         "Please make sure to supply required values for cloudant.host.")
-      }
+    }
   }
 }
