@@ -21,16 +21,19 @@ import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.SparkConf
 
-import org.apache.bahir.cloudant.CloudantConfig
+import org.apache.bahir.cloudant.{CloudantAllDocsConfig, CloudantChangesConfig, CloudantConfig}
 
  object JsonStoreConfigManager {
   val CLOUDANT_CONNECTOR_VERSION = "2.0.0"
-  val ALL_DOCS_LIMIT = -1
+  val ALLDOCS_OR_CHANGES_LIMIT: Int = -1
+  val CHANGES_INDEX = "_changes"
+  val ALL_DOCS_INDEX = "_all_docs"
 
   private val CLOUDANT_HOST_CONFIG = "cloudant.host"
   private val CLOUDANT_USERNAME_CONFIG = "cloudant.username"
   private val CLOUDANT_PASSWORD_CONFIG = "cloudant.password"
   private val CLOUDANT_PROTOCOL_CONFIG = "cloudant.protocol"
+  private val CLOUDANT_API_RECEIVER = "cloudant.apiReceiver"
   private val USE_QUERY_CONFIG = "cloudant.useQuery"
   private val QUERY_LIMIT_CONFIG = "cloudant.queryLimit"
 
@@ -109,7 +112,13 @@ import org.apache.bahir.cloudant.CloudantConfig
           valueS
         }
       }
-      sparkConf.get(s"spark.$key", default)
+      val sparkDefault = sparkConf.get(s"spark.$key", default)
+      if(sparkDefault != null && sparkDefault.isEmpty) {
+        throw new CloudantException(s"spark.$key parameter is empty. " +
+          s"Please supply the required value.")
+      } else {
+        sparkDefault
+      }
     } else {
       if (valueS == null) defaultInConfig else valueS
     }
@@ -152,11 +161,14 @@ import org.apache.bahir.cloudant.CloudantConfig
     implicit val bulkSize = getInt(sparkConf, parameters, BULK_SIZE_CONFIG)
     implicit val schemaSampleSize = getInt(sparkConf, parameters, SCHEMA_SAMPLE_SIZE_CONFIG)
     implicit val createDBOnSave = getBool(sparkConf, parameters, CREATE_DB_ON_SAVE_CONFIG)
+    implicit val apiReceiver = getString(sparkConf, parameters, CLOUDANT_API_RECEIVER)
 
     implicit val useQuery = getBool(sparkConf, parameters, USE_QUERY_CONFIG)
     implicit val queryLimit = getInt(sparkConf, parameters, QUERY_LIMIT_CONFIG)
 
-    val dbName = parameters.getOrElse("database", parameters.getOrElse("path", null))
+    val dbName = parameters.getOrElse("database", parameters.getOrElse("path",
+      throw new CloudantException(s"Cloudant database name is empty. " +
+        s"Please supply the required value.")))
     val indexName = parameters.getOrElse("index", null)
     val viewName = parameters.getOrElse("view", null)
     val selector = parameters.getOrElse("selector", null)
@@ -166,13 +178,20 @@ import org.apache.bahir.cloudant.CloudantConfig
     val user = getString(sparkConf, parameters, CLOUDANT_USERNAME_CONFIG)
     val passwd = getString(sparkConf, parameters, CLOUDANT_PASSWORD_CONFIG)
 
-    if (host != null) {
-      new CloudantConfig(protocol, host, dbName, indexName,
+    if (apiReceiver == ALL_DOCS_INDEX) {
+      new CloudantAllDocsConfig(protocol, host, dbName, indexName,
         viewName) (user, passwd, total, max, min, requestTimeout, bulkSize,
-        schemaSampleSize, createDBOnSave, selector, useQuery, queryLimit)
+        schemaSampleSize, createDBOnSave, apiReceiver, selector, useQuery,
+        queryLimit)
+    } else if (apiReceiver == CHANGES_INDEX) {
+      new CloudantChangesConfig(protocol, host, dbName, indexName,
+        viewName) (user, passwd, total, max, min, requestTimeout, bulkSize,
+        schemaSampleSize, createDBOnSave, apiReceiver, selector, useQuery,
+        queryLimit)
     } else {
-      throw new RuntimeException("Spark configuration is invalid! " +
-        "Please make sure to supply required values for cloudant.host.")
-      }
+      throw new CloudantException(s"spark.$CLOUDANT_API_RECEIVER parameter " +
+        s"is invalid. Please supply the valid option '" + ALL_DOCS_INDEX + "' or '" +
+        CHANGES_INDEX + "'.")
+    }
   }
 }
