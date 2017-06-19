@@ -32,10 +32,10 @@ object TestUtils {
   )
 
   // Set CouchDB/Cloudant host, username and password for local testing
-  private val host = System.getenv("DB_HOST")
-  private val username = System.getenv("DB_USER")
-  private val password = System.getenv("DB_PASSWORD")
-  private val protocol = System.getenv("DB_PROTOCOL")
+  private val host = System.getenv("CLOUDANT_HOST")
+  private val username = System.getenv("CLOUDANT_USER")
+  private val password = System.getenv("CLOUDANT_PASSWORD")
+  private val protocol = System.getenv("CLOUDANT_PROTOCOL")
 
   def deleteRecursively(file: File): Unit = {
     if (file.isDirectory) {
@@ -46,7 +46,7 @@ object TestUtils {
     }
   }
 
-  // default value is https for cloudant.com accounts, http for CouchDB
+  // default value is https for cloudant.com accounts
   def getProtocol: String = {
     if (protocol != null && !protocol.isEmpty) {
       protocol
