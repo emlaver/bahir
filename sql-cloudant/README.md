@@ -39,7 +39,6 @@ Submit a job in Scala:
 
 This library is compiled for Scala 2.11 only, and intends to support Spark 2.0 onwards.
 
-
 ## Configuration options	
 The configuration is obtained in the following sequence:
 
@@ -52,16 +51,17 @@ Here each subsequent configuration overrides the previous one. Thus, configurati
 
 
 ### Configuration in application.conf
-Default values are defined in [here](cloudant-spark-sql/src/main/resources/application.conf).
+Default values are defined in [here](src/main/resources/application.conf).
 
 ### Configuration on SparkConf
 
 Name | Default | Meaning
 --- |:---:| ---
+cloudant.apiReceiver|"_all_docs"| API endpoint for RelationProvider when loading or saving data from Cloudant to DataFrames or SQL temporary tables. Select between "_all_docs" or "_changes" endpoint.
 cloudant.protocol|https|protocol to use to transfer data: http or https
-cloudant.host||cloudant host url
-cloudant.username||cloudant userid
-cloudant.password||cloudant password
+cloudant.host| |cloudant host url
+cloudant.username| |cloudant userid
+cloudant.password| |cloudant password
 cloudant.useQuery|false|By default, _all_docs endpoint is used if configuration 'view' and 'index' (see below) are not set. When useQuery is enabled, _find endpoint will be used in place of _all_docs when query condition is not on primary key field (_id), so that query predicates may be driven into datastore. 
 cloudant.queryLimit|25|The maximum number of results returned when querying the _find endpoint.
 jsonstore.rdd.partitions|10|the number of partitions intent used to drive JsonStoreRDD loading query result in parallel. The actual number is calculated based on total rows returned and satisfying maxInPartition and minInPartition
@@ -69,8 +69,28 @@ jsonstore.rdd.maxInPartition|-1|the max rows in a partition. -1 means unlimited
 jsonstore.rdd.minInPartition|10|the min rows in a partition.
 jsonstore.rdd.requestTimeout|900000| the request timeout in milliseconds
 bulkSize|200| the bulk save size
-schemaSampleSize| "-1" | the sample size for RDD schema discovery. 1 means we are using only first document for schema discovery; -1 means all documents; 0 will be treated as 1; any number N means min(N, total) docs 
-createDBOnSave|"false"| whether to create a new database during save operation. If false, a database should already exist. If true, a new database will be created. If true, and a database with a provided name already exists, an error will be raised. 
+schemaSampleSize|-1| the sample size for RDD schema discovery. 1 means we are using only first document for schema discovery; -1 means all documents; 0 will be treated as 1; any number N means min(N, total) docs 
+createDBOnSave|false| whether to create a new database during save operation. If false, a database should already exist. If true, a new database will be created. If true, and a database with a provided name already exists, an error will be raised. 
+
+The `cloudant.apiReceiver` option allows for _changes or _all_docs API endpoint to be called while loading Cloudant data into Spark DataFrames or SQL Tables,
+or saving data from DataFrames or SQL Tables to a Cloudant database.  
+
+**Note:** When using `_changes` API, please consider: 
+1. Results are partially ordered and may not be be presented in order in 
+which documents were updated.
+2. In case of shards' unavailability, you may see duplicate results (changes that have been seen already)
+3. Can use `selector` option to retrieve all revisions for docs
+4. Only supports single threaded
+
+When using `_all_docs` API:
+1. Supports parallel reads (using offset and range)
+
+Performance of `_changes` API is still better in most cases (even with single threaded support). 
+During several performance tests using 50 to 200 MB Cloudant databases, load time from Cloudant to Spark using `_changes` 
+feed was faster to complete every time compared to `_all_docs`.
+ 
+See [CloudantChangesDFSuite](src/test/scala/org/apache/bahir/cloudant/CloudantChangesDFSuite.scala) 
+for examples of loading data into a Spark DataFrame with `_changes` API.
 
 ### Configuration on Spark SQL Temporary Table or DataFrame
 
@@ -78,13 +98,14 @@ Besides all the configurations passed to a temporary table or dataframe through 
 
 Name | Default | Meaning
 --- |:---:| ---
-database||cloudant database name
-view||cloudant view w/o the database name. only used for load.
-index||cloudant search index w/o the database name. only used for load data with less than or equal to 200 results.
-path||cloudant: as database name if database is not present
-schemaSampleSize|"-1"| the sample size used to discover the schema for this temp table. -1 scans all documents
 bulkSize|200| the bulk save size
-createDBOnSave|"false"| whether to create a new database during save operation. If false, a database should already exist. If true, a new database will be created. If true, and a database with a provided name already exists, an error will be raised. 
+createDBOnSave|false| whether to create a new database during save operation. If false, a database should already exist. If true, a new database will be created. If true, and a database with a provided name already exists, an error will be raised. 
+database| | Cloudant database name
+index| | Cloudant search index w/o the database name. only used for load data with less than or equal to 200 results.
+path| | Cloudant: as database name if database is not present
+schemaSampleSize|-1| the sample size used to discover the schema for this temp table. -1 scans all documents
+selector| all documents| a selector written in Cloudant Query syntax, specifying conditions for selecting documents. Only documents satisfying the selector's conditions will be retrieved from Cloudant and loaded into Spark.
+view|| Cloudant view w/o the database name. only used for load.
 
 For fast loading, views are loaded without include_docs. Thus, a derived schema will always be: `{id, key, value}`, where `value `can be a compount field. An example of loading data from a view: 
 
@@ -102,7 +123,6 @@ cloudant.username||cloudant userid
 cloudant.password||cloudant password
 database||cloudant database name
 selector| all documents| a selector written in Cloudant Query syntax, specifying conditions for selecting documents. Only documents satisfying the selector's conditions will be retrieved from Cloudant and loaded into Spark.
-
 
 ### Configuration in spark-submit using --conf option
 
