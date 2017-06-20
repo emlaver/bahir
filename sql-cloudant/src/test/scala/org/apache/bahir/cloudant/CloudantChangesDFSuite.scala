@@ -23,21 +23,23 @@ class CloudantChangesDFSuite extends ClientSparkFunSuite {
   val apiReceiver = "_changes"
 
   override def beforeAll() {
-    super.beforeAll()
-    spark = SparkSession.builder().config(conf)
-      .config("cloudant.protocol", TestUtils.getProtocol)
-      .config("cloudant.host", TestUtils.getHost)
-      .config("cloudant.username", TestUtils.getUsername)
-      .config("cloudant.password", TestUtils.getPassword)
-      .config("cloudant.apiReceiver", apiReceiver)
-      .getOrCreate()
+    runIfTestsEnabled("Prepare Cloudant test databases") {
+      super.beforeAll()
+      spark = SparkSession.builder().config(conf)
+        .config("cloudant.protocol", TestUtils.getProtocol)
+        .config("cloudant.host", TestUtils.getHost)
+        .config("cloudant.username", TestUtils.getUsername)
+        .config("cloudant.password", TestUtils.getPassword)
+        .config("cloudant.apiReceiver", apiReceiver)
+        .getOrCreate()
+    }
   }
   override def afterAll(): Unit = {
     super.afterAll()
     spark.close()
   }
 
-  test("load and save data from Cloudant database") {
+  testIfEnabled("load and save data from Cloudant database") {
     // Loading data from Cloudant db
     val df = spark.read.format("org.apache.bahir.cloudant").load("n_flight")
     // Caching df in memory to speed computations
@@ -47,7 +49,7 @@ class CloudantChangesDFSuite extends ClientSparkFunSuite {
     assert(df.count() == 1967)
   }
 
-  test("load and count data from Cloudant search index") {
+  testIfEnabled("load and count data from Cloudant search index") {
     val df = spark.read.format("org.apache.bahir.cloudant")
       .option("index", "_design/view/_search/n_flights").load("n_flight")
     val total = df.filter(df("flightSegmentId") >"AA9")
@@ -56,7 +58,7 @@ class CloudantChangesDFSuite extends ClientSparkFunSuite {
     assert(total == 50)
   }
 
-  test("load data and count rows in filtered dataframe") {
+  testIfEnabled("load data and count rows in filtered dataframe") {
     // Loading data from Cloudant db
     val df = spark.read.format("org.apache.bahir.cloudant")
       .load("n_airportcodemapping")
@@ -65,7 +67,7 @@ class CloudantChangesDFSuite extends ClientSparkFunSuite {
   }
 
   // save data to Cloudant test
-  test("save filtered dataframe to database") {
+  testIfEnabled("save filtered dataframe to database") {
     val df = spark.read.format("org.apache.bahir.cloudant").load("n_flight")
 
     // Saving data frame with filter to Cloudant db
@@ -82,7 +84,7 @@ class CloudantChangesDFSuite extends ClientSparkFunSuite {
   }
 
   // createDBOnSave option test
-  test("save dataframe to database using createDBOnSave=true option") {
+  testIfEnabled("save dataframe to database using createDBOnSave=true option") {
     val df = spark.read.format("org.apache.bahir.cloudant")
       .load("n_airportcodemapping")
 
@@ -103,20 +105,20 @@ class CloudantChangesDFSuite extends ClientSparkFunSuite {
   }
 
   // view option tests
-  test("load and count data from view") {
+  testIfEnabled("load and count data from view") {
     val df = spark.read.format("org.apache.bahir.cloudant")
       .option("view", "_design/view/_view/AA0").load("n_flight")
     assert(df.count() == 5)
   }
 
-  test("load data from view with MapReduce function") {
+  testIfEnabled("load data from view with MapReduce function") {
     val df = spark.read.format("org.apache.bahir.cloudant")
       .option("view", "_design/view/_view/AAreduce?reduce=true")
       .load("n_flight")
     assert(df.count() == 1)
   }
 
-  test("load data and verify total count of selector, filter, and view option") {
+  testIfEnabled("load data and verify total count of selector, filter, and view option") {
     val df = spark.read.format("org.apache.bahir.cloudant")
       .option("selector", "{\"flightSegmentId\": {\"$eq\": \"AA2\"}}")
       .load("n_flight")

@@ -20,6 +20,12 @@ package org.apache.bahir.cloudant
 import java.io.File
 
 object TestUtils {
+  // Set CouchDB/Cloudant host, username and password for local testing
+  private val host = System.getenv("CLOUDANT_HOST")
+  private val username = System.getenv("CLOUDANT_USER")
+  private val password = System.getenv("CLOUDANT_PASSWORD")
+  private val protocol = System.getenv("CLOUDANT_PROTOCOL")
+
   // List of test databases to create from JSON flat files
   val testDatabasesList: List[String] = List(
     "n_airportcodemapping",
@@ -30,12 +36,6 @@ object TestUtils {
     "n_flight2",
     "n_flightsegment"
   )
-
-  // Set CouchDB/Cloudant host, username and password for local testing
-  private val host = System.getenv("CLOUDANT_HOST")
-  private val username = System.getenv("CLOUDANT_USER")
-  private val password = System.getenv("CLOUDANT_PASSWORD")
-  private val protocol = System.getenv("CLOUDANT_PROTOCOL")
 
   def deleteRecursively(file: File): Unit = {
     if (file.isDirectory) {
@@ -69,5 +69,21 @@ object TestUtils {
 
   def getPassword: String = {
     password
+  }
+
+  lazy val shouldRunTests = {
+    val isEnvSet = (username != null && !username.isEmpty) &&
+      (password != null && !password.isEmpty)
+    if (isEnvSet) {
+      // scalastyle:off println
+      // Print this so that they are easily visible on the console and not hidden in the log4j logs.
+      println(
+        s"""
+           |Sql-cloudant tests that require Cloudant databases have been enabled by
+           |the environment variables CLOUDANT_USER and CLOUDANT_PASSWORD.
+        """.stripMargin)
+      // scalastyle:on println
+    }
+    isEnvSet
   }
 }

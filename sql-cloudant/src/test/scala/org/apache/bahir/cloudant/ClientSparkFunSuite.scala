@@ -28,19 +28,20 @@ import com.google.gson.{Gson, JsonArray, JsonObject}
 import org.apache.spark.{SparkConf, SparkFunSuite}
 import org.apache.spark.sql.SparkSession
 
+import org.apache.bahir.cloudant.TestUtils.shouldRunTests
 
 class ClientSparkFunSuite extends SparkFunSuite {
-  private val tempDir: File = new File(System.getProperty("java.io.tmpdir") + "/sql-cloudant/")
   private var client: CloudantClient = _
+  private val tempDir: File = new File(System.getProperty("java.io.tmpdir") + "/sql-cloudant/")
 
   val conf: SparkConf = new SparkConf().setMaster("local[4]")
   var spark: SparkSession = _
 
   override def beforeAll() {
-    tempDir.mkdirs()
-    tempDir.deleteOnExit()
-    setupClient()
-    createTestDbs()
+      tempDir.mkdirs()
+      tempDir.deleteOnExit()
+      setupClient()
+      createTestDbs()
   }
 
   override def afterAll() {
@@ -109,5 +110,26 @@ class ClientSparkFunSuite extends SparkFunSuite {
 
   def deleteTestDb(dbName: String) {
     client.deleteDB(dbName)
+  }
+
+  /** Run the test if environment variable is set or ignore the test */
+  def testIfEnabled(testName: String)(testBody: => Unit) {
+    if (shouldRunTests) {
+      test(testName)(testBody)
+    } else {
+      ignore(s"$testName [enable by setting env var ${TestUtils.getUsername} and " +
+        s"${TestUtils.getPassword}]")(testBody)
+    }
+  }
+
+
+  /** Run the give body of code only if tests are enabled */
+  def runIfTestsEnabled(message: String)(body: => Unit): Unit = {
+    if (shouldRunTests) {
+      body
+    } else {
+      ignore(s"$message [enable by setting env var ${TestUtils.getUsername} and " +
+        s"${TestUtils.getPassword}]")(())
+    }
   }
 }

@@ -23,16 +23,19 @@ import org.apache.spark.sql.SparkSession
 
 import org.apache.bahir.cloudant.common.CloudantException
 
-class CloudantOptionSuite extends SparkFunSuite with BeforeAndAfter {
-  val conf: SparkConf = new SparkConf().setMaster("local[4]")
+class CloudantOptionSuite extends ClientSparkFunSuite with BeforeAndAfter {
 
-  var spark: SparkSession = _
+  override def beforeAll() {
+    runIfTestsEnabled("Prepare Cloudant test databases") {
+      super.beforeAll()
+    }
+  }
 
   after {
     spark.close()
   }
 
-  test("invalid api receiver option throws an error message") {
+  testIfEnabled("invalid api receiver option throws an error message") {
     spark = SparkSession.builder().config(conf)
       .config("cloudant.host", TestUtils.getHost)
       .config("cloudant.username", TestUtils.getUsername)
@@ -48,7 +51,7 @@ class CloudantOptionSuite extends SparkFunSuite with BeforeAndAfter {
 
   }
 
-  test("empty username option throws an error message") {
+  testIfEnabled("empty username option throws an error message") {
     spark = SparkSession.builder().config(conf)
       .config("cloudant.host", TestUtils.getHost)
       .config("cloudant.username", "")
@@ -62,7 +65,7 @@ class CloudantOptionSuite extends SparkFunSuite with BeforeAndAfter {
       s"is empty. Please supply the required value.")
   }
 
-  test("empty password option throws an error message") {
+  testIfEnabled("empty password option throws an error message") {
     spark = SparkSession.builder().config(conf)
       .config("cloudant.host", TestUtils.getHost)
       .config("cloudant.username", TestUtils.getUsername)
@@ -76,7 +79,7 @@ class CloudantOptionSuite extends SparkFunSuite with BeforeAndAfter {
       s"is empty. Please supply the required value.")
   }
 
-  test("empty databaseName throws an error message") {
+  testIfEnabled("empty databaseName throws an error message") {
     spark = SparkSession.builder().config(conf)
       .config("cloudant.host", TestUtils.getHost)
       .config("cloudant.username", TestUtils.getUsername)

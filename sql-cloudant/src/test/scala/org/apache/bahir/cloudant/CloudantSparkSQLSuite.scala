@@ -30,17 +30,19 @@ class CloudantSparkSQLSuite extends ClientSparkFunSuite {
   val apiReceiver = "_all_docs"
 
   override def beforeAll() {
-    super.beforeAll()
-    spark = SparkSession.builder().config(conf)
-      .config("cloudant.protocol", TestUtils.getProtocol)
-      .config("cloudant.host", TestUtils.getHost)
-      .config("cloudant.username", TestUtils.getUsername)
-      .config("cloudant.password", TestUtils.getPassword)
-      .config("cloudant.apiReceiver", apiReceiver)
-      .getOrCreate()
+    runIfTestsEnabled("Prepare Cloudant test databases") {
+      super.beforeAll()
+      spark = SparkSession.builder().config(conf)
+        .config("cloudant.protocol", TestUtils.getProtocol)
+        .config("cloudant.host", TestUtils.getHost)
+        .config("cloudant.username", TestUtils.getUsername)
+        .config("cloudant.password", TestUtils.getPassword)
+        .config("cloudant.apiReceiver", apiReceiver)
+        .getOrCreate()
+    }
   }
 
-  test("verify results from temp view of database n_airportcodemapping") {
+  testIfEnabled("verify results from temp view of database n_airportcodemapping") {
 
     // create a temp table from Cloudant db and query it using sql syntax
     val sparkSql = spark.sql(
@@ -69,7 +71,7 @@ class CloudantSparkSQLSuite extends ClientSparkFunSuite {
     assert(df2count == airportData.count())
   }
 
-  test("verify results from temp view of index in n_flight") {
+  testIfEnabled("verify results from temp view of index in n_flight") {
     // create a temp table from Cloudant index  and query it using sql syntax
     val sparkSql = spark.sql(
       s"""
