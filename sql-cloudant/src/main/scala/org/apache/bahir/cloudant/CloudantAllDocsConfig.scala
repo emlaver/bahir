@@ -23,11 +23,11 @@ class CloudantAllDocsConfig(protocol: String, host: String, dbName: String,
                            (username: String, password: String, partitions: Int,
                             maxInPartition: Int, minInPartition: Int, requestTimeout: Long,
                             bulkSize: Int, schemaSampleSize: Int,
-                            createDBOnSave: Boolean, apiReceiver: String, selector: String,
+                            createDBOnSave: Boolean, apiReceiver: String,
                             useQuery: Boolean, queryLimit: Int)
   extends CloudantConfig(protocol, host, dbName, indexName, viewName)(username, password,
   partitions, maxInPartition, minInPartition, requestTimeout, bulkSize, schemaSampleSize,
-  createDBOnSave, apiReceiver, selector, useQuery, queryLimit) {
+  createDBOnSave, apiReceiver, useQuery, queryLimit) {
 
   override val defaultIndex: String = apiReceiver
 
@@ -58,10 +58,21 @@ class CloudantAllDocsConfig(protocol: String, host: String, dbName: String,
     val suffix = {
       if (url.indexOf(JsonStoreConfigManager.ALL_DOCS_INDEX) > 0) {
         "include_docs=true&limit=" + limit + "&skip=" + skip
+      } else if (viewName != null) {
+        "limit=" + limit + "&skip=" + skip
+      } else if (queryUsed) {
+        ""
       } else {
-        null
-      }
+        "include_docs=true&limit=" + limit
+      } // TODO Index query does not support subset query. Should disable Partitioned loading?
     }
-    super.getSubSetUrl(url, skip, limit, queryUsed, suffix)
+    if (suffix.length == 0) {
+      url
+    } else if (url.indexOf('?') > 0) {
+      url + "&" + suffix
+    }
+    else {
+      url + "?" + suffix
+    }
   }
 }

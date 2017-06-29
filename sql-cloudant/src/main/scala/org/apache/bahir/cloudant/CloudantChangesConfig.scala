@@ -16,7 +16,7 @@
  */
 package org.apache.bahir.cloudant
 
-import org.apache.bahir.cloudant.common.JsonStoreConfigManager
+import org.apache.bahir.cloudant.common.{CloudantException, JsonStoreConfigManager}
 
 class CloudantChangesConfig(protocol: String, host: String, dbName: String,
                             indexName: String = null, viewName: String = null)
@@ -27,9 +27,13 @@ class CloudantChangesConfig(protocol: String, host: String, dbName: String,
                             useQuery: Boolean, queryLimit: Int)
   extends CloudantConfig(protocol, host, dbName, indexName, viewName)(username, password,
     partitions, maxInPartition, minInPartition, requestTimeout, bulkSize, schemaSampleSize,
-    createDBOnSave, apiReceiver, selector, useQuery, queryLimit) {
+    createDBOnSave, apiReceiver, useQuery, queryLimit) {
 
   override val defaultIndex: String = apiReceiver
+
+  def getSelector : String = {
+    selector
+  }
 
   def getChangesUrl: String = {
     dbUrl + "/" + defaultIndex + "?include_docs=true&feed=normal"
@@ -71,29 +75,44 @@ class CloudantChangesConfig(protocol: String, host: String, dbName: String,
     }
   }
 
-  def getSubSetUrl (url: String, skip: Int, limit: Int, queryUsed: Boolean): String = {
+  def getSubSetUrl (url: String, limit: Int, queryUsed: Boolean = false, lastSeq: String = ""):
+  String = {
     val suffix = {
       if (url.indexOf(JsonStoreConfigManager.CHANGES_INDEX) > 0) {
         if (selector != null) {
           "include_docs=true&limit=" + limit + "&since=" +
-            skip.toString + "&filter=_selector"
+            lastSeq.toString + "&filter=_selector"
         } else {
-          "include_docs=true&limit=" + limit + "&since=" + skip.toString
+          "include_docs=true&limit=" + limit + "&feed=continuous&heartbeat=3000"
         }
+      } else if (viewName != null) {
+        throw new CloudantException("You must use _all_docs endpoint if " +
+          "Cloudant view and skip option are required.")
+      } else if (queryUsed) {
+        ""
       } else {
-        null
+        "include_docs=true&limit=" + limit
       }
     }
-    super.getSubSetUrl(url, skip, limit, queryUsed, suffix)
+    if (suffix.length == 0) {
+      url
+    } else if (url.indexOf('?') > 0) {
+      url + "&" + suffix
+    } else {
+      url + "?" + suffix
+    }
   }
 
-  override def getUrl(limit: Int, excludeDDoc: Boolean = false): String = {
+  override def getUrl(limit: Int = JsonStoreConfigManager.ALLDOCS_OR_CHANGES_LIMIT,
+                      excludeDDoc: Boolean = false): String = {
     if (viewName == null) {
       val baseUrl = {
         if (excludeDDoc) {
-          dbUrl + "/_all_docs?filter=_selector&include_docs=true"
+          dbUrl + "/" + defaultIndex +
+            "?include_docs=true&feed=continuous&heartbeat=3000&filter=_selector"
         } else {
-          dbUrl + "/_all_docs?include_docs=true"
+          dbUrl + "/" + defaultIndex +
+            "?include_docs=true&feed=continuous&heartbeat=3000"
         }
       }
       if (limit == JsonStoreConfigManager.ALLDOCS_OR_CHANGES_LIMIT) {

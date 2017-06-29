@@ -181,7 +181,7 @@ import org.apache.bahir.cloudant.{CloudantAllDocsConfig, CloudantChangesConfig, 
     if (apiReceiver == ALL_DOCS_INDEX) {
       new CloudantAllDocsConfig(protocol, host, dbName, indexName,
         viewName) (user, passwd, total, max, min, requestTimeout, bulkSize,
-        schemaSampleSize, createDBOnSave, apiReceiver, selector, useQuery,
+        schemaSampleSize, createDBOnSave, apiReceiver, useQuery,
         queryLimit)
     } else if (apiReceiver == CHANGES_INDEX) {
       new CloudantChangesConfig(protocol, host, dbName, indexName,

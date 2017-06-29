@@ -32,7 +32,7 @@ abstract class CloudantConfig(val protocol: String, val host: String,
     (implicit val username: String, val password: String,
     val partitions: Int, val maxInPartition: Int, val minInPartition: Int,
     val requestTimeout: Long, val bulkSize: Int, val schemaSampleSize: Int,
-    val createDBOnSave: Boolean, val apiReceiver: String, val selector: String,
+    val createDBOnSave: Boolean, val apiReceiver: String,
     val useQuery: Boolean = false, val queryLimit: Int)
     extends Serializable {
 
@@ -78,10 +78,6 @@ abstract class CloudantConfig(val protocol: String, val host: String,
 
   def queryEnabled: Boolean = {
     useQuery && indexName == null && viewName == null
-  }
-
-  def getSelector : String = {
-    selector
   }
 
   def allowPartition(queryUsed: Boolean): Boolean = {indexName==null && !queryUsed}
@@ -133,7 +129,7 @@ abstract class CloudantConfig(val protocol: String, val host: String,
         }
       }
       (dbUrl + "/" + defaultIndex + condition, true, false)
-    } else if (indexName!=null) {
+    } else if (indexName != null) {
       //  push down to indexName
       val condition = calculateCondition(field, start, startInclusive,
         end, endInclusive)
@@ -180,31 +176,6 @@ abstract class CloudantConfig(val protocol: String, val host: String,
       URLEncoder.encode(condition, "UTF-8")
     } else {
       default_filter
-    }
-  }
-
-  def getSubSetUrl (url: String, skip: Int, limit: Int, queryUsed: Boolean): String
-
-  def getSubSetUrl(url: String, skip: Int, limit: Int, queryUsed: Boolean, suffix: String = null):
-  String = {
-    val subSetSuffix = {
-      if (suffix != null) {
-        suffix
-      } else if (viewName != null) {
-        "limit=" + limit + "&skip=" + skip
-      } else if (queryUsed) {
-        ""
-      } else {
-        "include_docs=true&limit=" + limit
-      } // TODO Index query does not support subset query. Should disable Partitioned loading?
-    }
-
-    if (subSetSuffix.length == 0) {
-      url
-    } else if (url.indexOf('?') > 0) {
-      url + "&" + subSetSuffix
-    } else {
-      url + "?" + subSetSuffix
     }
   }
 

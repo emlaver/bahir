@@ -209,7 +209,12 @@ class JsonStoreRDD(sc: SparkContext, config: CloudantConfig)
         null
       }
     }
-    new JsonStoreDataAccess(myPartition.config).getIterator(myPartition.skip,
+    if (config.apiReceiver == JsonStoreConfigManager.ALL_DOCS_INDEX) {
+      new JsonStoreDataAccess(myPartition.config).getIterator(myPartition.skip,
         myPartition.limit, myPartition.url)
+    } else {
+      new JsonStoreDataAccess(myPartition.config).getChangesFeedIterator(myPartition.limit,
+        myPartition.url)
+    }
   }
 }

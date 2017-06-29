@@ -17,6 +17,7 @@
 package org.apache.bahir.cloudant.common
 
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.LinkedBlockingQueue
 
 import scala.collection.mutable
 import scala.concurrent._
@@ -29,12 +30,12 @@ import ExecutionContext.Implicits.global
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json._
 
-import org.apache.bahir.cloudant.CloudantConfig
-
+import org.apache.bahir.cloudant._
 
 class JsonStoreDataAccess (config: CloudantConfig)  {
   lazy val logger: Logger = LoggerFactory.getLogger(getClass)
   implicit lazy val timeout: Long = config.requestTimeout
+
 
   def getMany(limit: Int)(implicit columns: Array[String] = null): Seq[String] = {
     if (limit == 0) {
@@ -46,6 +47,7 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
         " schema sample size is " + limit + "!")
     }
     var r = this.getQueryResult[Seq[String]](config.getUrl(limit), processAll)
+
     if (r.isEmpty) {
       r = this.getQueryResult[Seq[String]](config.getUrl(limit, excludeDDoc = true),
         processAll)
@@ -66,8 +68,16 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
   def getIterator(skip: Int, limit: Int, url: String)
       (implicit columns: Array[String] = null,
       postData: String = null): Iterator[String] = {
-    val newUrl = config.getSubSetUrl(url, skip, limit, postData != null)
+    val newUrl = config.asInstanceOf[CloudantAllDocsConfig]
+      .getSubSetUrl(url, skip, limit, postData != null)
     this.getQueryResult[Iterator[String]](newUrl, processIterator)
+  }
+
+  def getChangesFeedIterator(limit: Int, url: String)
+                 (implicit columns: Array[String] = null,
+                  postData: String = null): Iterator[String] = {
+    val newUrl = config.asInstanceOf[CloudantChangesConfig].getSubSetUrl(url, limit)
+    this.getChangesFeedResult[Iterator[String]](newUrl, limit)
   }
 
   def getTotalRows(url: String, queryUsed: Boolean)
@@ -81,8 +91,8 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
   }
 
   private def processAll (result: String)
-      (implicit columns: Array[String],
-      postData: String = null) = {
+                            (implicit columns: Array[String],
+                             postData: String = null) = {
     logger.debug(s"processAll:$result, columns:$columns")
     val jsonResult: JsValue = Json.parse(result)
     var rows = config.getRows(jsonResult, postData != null )
@@ -116,29 +126,54 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
     getQueryResult(url, processResults)
   }
 
-  private def getQueryResult[T]
-      (url: String, postProcessor: (String) => T)
-      (implicit columns: Array[String] = null,
-      postData: String = null) : T = {
+  def getChangesFeedResult[T](url: String, limit: Int)
+  (implicit columns: Array[String] = null): Iterator[String] = {
+    logger.info(s"Loading data from Cloudant using: $url")
+    val queue = new LinkedBlockingQueue[String]()
+
+    // Producer thread for pulling documents from continuous changes feed
+    val producer = new ChangesFeedProducer[String](url,
+      config.asInstanceOf[CloudantChangesConfig], queue, limit)
+    val prodThrd: Thread = new Thread(producer)
+    prodThrd.start()
+
+    var rows = scala.collection.mutable.ListBuffer.empty[String]
+
+    // Consumer while loop to process lines from changes feed
+    while (!producer.getStop) {
+      val item = queue.take()
+      if (item.nonEmpty) {
+        val json: JsValue = Json.parse(item)
+        val jsonDoc = (json \ "doc").getOrElse(JsNull)
+
+        if (jsonDoc.isInstanceOf[JsValue]) {
+          // rows += jsonDoc
+          if (config.viewName == null &&
+            config.asInstanceOf[CloudantChangesConfig].getSelector == null) {
+            // filter out design docs
+            if (FilterDDocs.filter(jsonDoc)) {
+              rows += convert(jsonDoc)
+            }
+          } else {
+            rows += convert(jsonDoc)
+          }
+        }
+      }
+      queue.remove(item)
+    }
+    rows.iterator
+  }
+
+  private def getQueryResult[T](url: String, postProcessor: (String) => T)
+                               (implicit columns: Array[String] = null,
+                                postData: String = null) : T = {
     logger.info(s"Loading data from Cloudant using: $url , postData: $postData")
     val requestTimeout = config.requestTimeout.toInt
-    val selector: String = if (config.getSelector != null) {
-      "{\"selector\":" + config.getSelector + "}"
-    } else {
-      // Selector for filtering out design docs in _changes feed
-      "{\"selector\": { \"_id\": { \"$regex\": \"^(?!.*_design/)\" } }}"
-    }
     val clRequest: HttpRequest = config.username match {
       case null =>
         if (postData != null) {
           Http(url)
             .postData(postData)
-            .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-            .header("Content-Type", "application/json")
-            .header("User-Agent", "spark-cloudant")
-        } else if (url.indexOf("filter=_selector") > 0) {
-          Http(url)
-            .postData(selector)
             .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
             .header("Content-Type", "application/json")
             .header("User-Agent", "spark-cloudant")
@@ -150,14 +185,7 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
       case _ =>
         if (postData != null) {
           Http(url)
-          .postData(postData)
-          .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-            .header("Content-Type", "application/json")
-            .header("User-Agent", "spark-cloudant")
-          .auth(config.username, config.password)
-        } else if (url.indexOf("filter=_selector") > 0) {
-          Http(url)
-            .postData(selector)
+            .postData(postData)
             .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
             .header("Content-Type", "application/json")
             .header("User-Agent", "spark-cloudant")
@@ -171,13 +199,14 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
     }
 
     val clResponse: HttpResponse[String] = clRequest.execute()
-    if (! clResponse.isSuccess) {
+    if (!clResponse.isSuccess) {
       throw new RuntimeException("Database " + config.getDbname +
         " request error: " + clResponse.body)
     }
     val data = postProcessor(clResponse.body)
     logger.debug(s"got result:$data")
     data
+
   }
 
   def createDB(): Unit = {
@@ -281,5 +310,4 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
     }
     Await.result(mainFtr, (config.requestTimeout * totalBulks).millis) // scalastyle:ignore
   }
-
 }
