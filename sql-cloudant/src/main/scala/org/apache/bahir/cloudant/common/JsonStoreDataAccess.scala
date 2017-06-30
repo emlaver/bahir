@@ -32,7 +32,7 @@ import play.api.libs.json._
 
 import org.apache.bahir.cloudant._
 
-class JsonStoreDataAccess (config: CloudantConfig)  {
+class JsonStoreDataAccess (config: CloudantConfig) {
   lazy val logger: Logger = LoggerFactory.getLogger(getClass)
   implicit lazy val timeout: Long = config.requestTimeout
 
@@ -132,22 +132,24 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
     val queue = new LinkedBlockingQueue[String]()
 
     // Producer thread for pulling documents from continuous changes feed
-    val producer = new ChangesFeedProducer[String](url,
-      config.asInstanceOf[CloudantChangesConfig], queue, limit)
-    val prodThrd: Thread = new Thread(producer)
-    prodThrd.start()
+    // val producer = new ChangesFeedProducer[String](url,
+    //   config.asInstanceOf[CloudantChangesConfig], queue, limit)
+    // val prodThrd: Thread = new Thread(producer)
+    // prodThrd.start()
+    val changesThrd = new CloudantChangesReceiver(url,
+       config.asInstanceOf[CloudantChangesConfig], queue, limit)
+    changesThrd.onStart()
 
     var rows = scala.collection.mutable.ListBuffer.empty[String]
 
     // Consumer while loop to process lines from changes feed
-    while (!producer.getStop) {
+    while (!changesThrd.getStop && queue.size() > 0) {
       val item = queue.take()
       if (item.nonEmpty) {
         val json: JsValue = Json.parse(item)
         val jsonDoc = (json \ "doc").getOrElse(JsNull)
 
         if (jsonDoc.isInstanceOf[JsValue]) {
-          // rows += jsonDoc
           if (config.viewName == null &&
             config.asInstanceOf[CloudantChangesConfig].getSelector == null) {
             // filter out design docs

@@ -19,7 +19,6 @@ package org.apache.bahir.cloudant
 import java.util.concurrent.BlockingQueue
 
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.libs.json.{JsObject, Json, JsValue}
 import scalaj.http.{Http, HttpRequest}
 
 import org.apache.bahir.cloudant.common.CloudantException
