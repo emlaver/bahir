@@ -19,6 +19,8 @@ package org.apache.spark.examples.sql.cloudant
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkConf
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.{Seconds, StreamingContext, Time}
 
 import org.apache.bahir.cloudant.CloudantReceiver
@@ -26,55 +28,71 @@ import org.apache.bahir.cloudant.CloudantReceiver
 
 object DemoCloudantStreaming {
   def main(args: Array[String]) {
-    val sparkConf = new SparkConf().setAppName("Cloudant Spark SQL External Datasource in Scala")
+    val sparkConf = new SparkConf()
+      .setAppName("Cloudant Spark SQL External Datasource in Scala")
     // Create the context with a 10 seconds batch size
-    val ssc = new StreamingContext(sparkConf, Seconds(10))
+    sparkConf.set("spark.streaming.unpersist", "false")
+    val ssc = new StreamingContext(sparkConf, Seconds(30))
+    // ssc.sparkContext.setLogLevel("DEBUG")
 
     val changes = ssc.receiverStream(new CloudantReceiver(sparkConf, Map(
+      "spark.streaming.unpersist" -> "true",
       "database" -> "large-db")))
 
-    // var finalDf: DataFrame = null
-
-    // var i = 0
-
+    // Global RDD that's created from union of all RDDs
     var globalRDD = ssc.sparkContext.emptyRDD[String]
-    changes.foreachRDD((rdd: RDD[String], time: Time) => {
+    // var globalArray = ArrayBuffer("")
 
-      println(s"========= $time =========")// scalastyle:ignore
+    changes.foreachRDD((rdd: RDD[String], time: Time) => {
+      // Convert final global RDD[String] to DataFrame
+      var finalDataFrame: DataFrame = null
+
+      // Persist RDD for later use: https://forums.databricks.com/answers/272/view.html
+      rdd.persist(StorageLevel.MEMORY_AND_DISK)
 
       if (!rdd.isEmpty()) {
-        // union RDDs - very efficient operation: https://stackoverflow.com/a/29978189
-        globalRDD.union(rdd)
+        if (globalRDD != null) {
+          // Union each RDD in foreach loop
+          // val r = rdd.collect()
+          globalRDD = globalRDD.union(rdd)
+        } else {
+          globalRDD = rdd
+          // globalArray = rdd.collect()
+        }
       } else {
+        // Get the singleton instance of SparkSession
+        val spark = SparkSessionSingleton.getInstance(globalRDD.sparkContext.getConf)
+
         println("FINAL TIME: " + time)// scalastyle:ignore
+
+        // Get the singleton instance of SparkSession
+        // val spark = SparkSessionSingleton.getInstance(globalRDD.sparkContext.getConf)
+        finalDataFrame = spark.read.json(globalRDD)
+        finalDataFrame.printSchema()
+
+        // Create and cache SQL Temp Table
+        finalDataFrame.createOrReplaceTempView("demo_medium")
+        finalDataFrame.cache.createOrReplaceTempView("demo_medium")
+
+        println("FINAL DF COUNT: " + finalDataFrame.count()) // scalastyle:ignore
+
+        val demo = spark.sql(
+          s""" SELECT * FROM demo_medium
+        """.stripMargin)
+        demo.printSchema()
+
+        println("Temp Table Count: " + demo.count()) // scalastyle:ignore
+
         ssc.stop(stopSparkContext = true, stopGracefully = false)
+        // ssc.stop()
       }
     })
-
-    // Get the singleton instance of SparkSession
-    val spark = SparkSessionSingleton.getInstance(globalRDD.sparkContext.getConf)
-
-    // Convert final global RDD[String] to DataFrame
-    val finalDataFrame = spark.read.json(globalRDD)
-
-    // Create and cache SQL Temp Table
-    finalDataFrame.createOrReplaceTempView("demo_medium")
-    finalDataFrame.cache.createOrReplaceTempView("demo_medium")
-
-    println("DF Count: " + finalDataFrame.count()) // scalastyle:ignore
-
-    val demo = spark.sql(
-      s""" SELECT * FROM demo_medium
-        """.stripMargin)
-    demo.printSchema()
-
-    println("Temp Table Count: " + demo.count()) // scalastyle:ignore
 
 
     ssc.start
     // run streaming until finished
     ssc.awaitTermination
-    // ssc.stop(true)
+    // ssc.stop(stopSparkContext = true, stopGracefully = false)
   }
 }
 
