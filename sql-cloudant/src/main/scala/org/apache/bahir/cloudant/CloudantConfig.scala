@@ -27,31 +27,23 @@ import org.apache.bahir.cloudant.common._
 * as the filter today does not tell how to link the filters out And v.s. Or
 */
 
-abstract class CloudantConfig(val protocol: String, val host: String,
+class CloudantConfig(val protocol: String, val host: String,
     val dbName: String, val indexName: String, val viewName: String)
     (implicit val username: String, val password: String,
     val partitions: Int, val maxInPartition: Int, val minInPartition: Int,
     val requestTimeout: Long, val bulkSize: Int, val schemaSampleSize: Int,
-    val createDBOnSave: Boolean, val apiReceiver: String, val selector: String,
+    val createDBOnSave: Boolean, val apiReceiver: String,
     val useQuery: Boolean = false, val queryLimit: Int)
     extends Serializable {
 
   lazy val dbUrl: String = {protocol + "://" + host + "/" + dbName}
 
   val pkField = "_id"
-  val defaultIndex: String // _changes API does not work for partitions
+  val defaultIndex: String = apiReceiver
   val default_filter: String = "*:*"
 
   def getDbUrl: String = {
     dbUrl
-  }
-
-  def getLastUrl(skip: Int): String = {
-    if (skip == 0) {
-      null
-    } else {
-      s"$dbUrl/$defaultIndex?limit=$skip"
-    }
   }
 
   def getSchemaSampleSize: Int = {
@@ -64,6 +56,37 @@ abstract class CloudantConfig(val protocol: String, val host: String,
 
   def getLastNum(result: JsValue): JsValue = (result \ "last_seq").get
 
+  /* Url containing limit for docs in a Cloudant database.
+  * If a view is not defined, use the _all_docs endpoint.
+  * @return url with one doc limit for retrieving total doc count
+  */
+  def getUrl(limit: Int, excludeDDoc: Boolean = false): String = {
+    if (viewName == null) {
+      val baseUrl = {
+        if (excludeDDoc) {
+          dbUrl + "/_all_docs?startkey=%22_design0/%22&include_docs=true"
+        } else {
+          dbUrl + "/_all_docs?include_docs=true"
+        }
+      }
+      if (limit == JsonStoreConfigManager.ALLDOCS_OR_CHANGES_LIMIT) {
+        baseUrl
+      } else {
+        baseUrl + "&limit=" + limit
+      }
+    } else {
+      if (limit == JsonStoreConfigManager.ALLDOCS_OR_CHANGES_LIMIT) {
+        dbUrl + "/" + viewName
+      } else {
+        dbUrl + "/" + viewName + "?limit=" + limit
+      }
+    }
+  }
+
+  /* Url containing limit to count total docs in a Cloudant database.
+  *
+  * @return url with one doc limit for retrieving total doc count
+  */
   def getTotalUrl(url: String): String = {
     if (url.contains('?')) {
       url + "&limit=1"
@@ -80,19 +103,7 @@ abstract class CloudantConfig(val protocol: String, val host: String,
     useQuery && indexName == null && viewName == null
   }
 
-  def getSelector : String = {
-    selector
-  }
-
   def allowPartition(queryUsed: Boolean): Boolean = {indexName==null && !queryUsed}
-
-  def getUrl(limit: Int, excludeDDoc: Boolean = false): String = {
-    if (limit == JsonStoreConfigManager.ALLDOCS_OR_CHANGES_LIMIT) {
-      dbUrl + "/" + viewName
-    } else {
-      dbUrl + "/" + viewName + "?limit=" + limit
-    }
-  }
 
   def getRangeUrl(field: String = null, start: Any = null,
       startInclusive: Boolean = false, end: Any = null,
@@ -109,6 +120,31 @@ abstract class CloudantConfig(val protocol: String, val host: String,
       }
     } else {
       (url, pusheddown, queryUsed)
+    }
+  }
+
+  /*
+  * Url for paging using skip and limit options when loading docs with partitions.
+  */
+  def getSubSetUrl(url: String, skip: Int, limit: Int, queryUsed: Boolean): String = {
+    val suffix = {
+      if (url.indexOf(JsonStoreConfigManager.ALL_DOCS_INDEX) > 0) {
+        "include_docs=true&limit=" + limit + "&skip=" + skip
+      } else if (viewName != null) {
+        "limit=" + limit + "&skip=" + skip
+      } else if (queryUsed) {
+        ""
+      } else {
+        "include_docs=true&limit=" + limit
+      } // TODO Index query does not support subset query. Should disable Partitioned loading?
+    }
+    if (suffix.length == 0) {
+      url
+    } else if (url.indexOf('?') > 0) {
+      url + "&" + suffix
+    }
+    else {
+      url + "?" + suffix
     }
   }
 
@@ -133,7 +169,7 @@ abstract class CloudantConfig(val protocol: String, val host: String,
         }
       }
       (dbUrl + "/" + defaultIndex + condition, true, false)
-    } else if (indexName!=null) {
+    } else if (indexName != null) {
       //  push down to indexName
       val condition = calculateCondition(field, start, startInclusive,
         end, endInclusive)
@@ -180,31 +216,6 @@ abstract class CloudantConfig(val protocol: String, val host: String,
       URLEncoder.encode(condition, "UTF-8")
     } else {
       default_filter
-    }
-  }
-
-  def getSubSetUrl (url: String, skip: Int, limit: Int, queryUsed: Boolean): String
-
-  def getSubSetUrl(url: String, skip: Int, limit: Int, queryUsed: Boolean, suffix: String = null):
-  String = {
-    val subSetSuffix = {
-      if (suffix != null) {
-        suffix
-      } else if (viewName != null) {
-        "limit=" + limit + "&skip=" + skip
-      } else if (queryUsed) {
-        ""
-      } else {
-        "include_docs=true&limit=" + limit
-      } // TODO Index query does not support subset query. Should disable Partitioned loading?
-    }
-
-    if (subSetSuffix.length == 0) {
-      url
-    } else if (url.indexOf('?') > 0) {
-      url + "&" + subSetSuffix
-    } else {
-      url + "?" + subSetSuffix
     }
   }
 
