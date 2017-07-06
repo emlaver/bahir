@@ -138,5 +138,4 @@ class CloudantChangesDFSuite extends ClientSparkFunSuite {
     assert(dfcount == df3count)
     assert(df2count == df3count)
   }
-
 }
