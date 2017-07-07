@@ -48,7 +48,7 @@ class CloudantChangesConfig(protocol: String, host: String, dbName: String,
    */
   def getStorageLevelForStreaming : StorageLevel = {
     if (storageLevel == null) {
-      StorageLevel.MEMORY_ONLY_SER
+      StorageLevel.MEMORY_ONLY
     } else {
       storageLevel
     }

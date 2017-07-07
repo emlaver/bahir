@@ -110,7 +110,7 @@ index| | Cloudant search index w/o the database name. only used for load data wi
 path| | Cloudant: as database name if database is not present
 schemaSampleSize|-1| the sample size used to discover the schema for this temp table. -1 scans all documents
 selector|all documents| a selector written in Cloudant Query syntax, specifying conditions for selecting documents when the `cloudant.apiReceiver` option is set to `_changes`. Only documents satisfying the selector's conditions will be retrieved from Cloudant and loaded into Spark.
-storageLevel|MEMORY_ONLY_SER| the storage level when persisting Spark data sets during load when `cloudant.apiReceiver` option equals `_changes`
+storageLevel|MEMORY_ONLY| the storage level when persisting Spark data sets during load when `cloudant.apiReceiver` option equals `_changes`.  See [RDD Persistence section](https://spark.apache.org/docs/latest/programming-guide.html#rdd-persistence) in Spark's Progamming Guide for all available storage level options.
 view| | Cloudant view w/o the database name. only used for load.
 
 If loading Cloudant docs from a database greater than 200 MB, set `cloudant.apiReceiver`to `_changes`.  This will enable
