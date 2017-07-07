@@ -22,6 +22,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types._
+import org.apache.spark.streaming.{Seconds, StreamingContext}
 
 import org.apache.bahir.cloudant.common.{JsonStoreDataAccess, JsonStoreRDD, _}
 
@@ -103,7 +104,8 @@ class DefaultSource extends RelationProvider
       val schema: StructType = {
         if (inSchema != null) {
           inSchema
-        } else {
+        } else if (!config.isInstanceOf[CloudantChangesConfig]
+          || config.viewName != null || config.indexName != null) {
           val df = if (config.getSchemaSampleSize ==
             JsonStoreConfigManager.ALLDOCS_OR_CHANGES_LIMIT &&
             config.viewName == null
@@ -118,6 +120,56 @@ class DefaultSource extends RelationProvider
             sqlContext.read.json(aRDD)
           }
           df.schema
+        } else {
+          /* Create a streaming context to handle transforming docs in
+          * larger databases into Spark datasets
+          */
+          val ssc = new StreamingContext(sqlContext.sparkContext, Seconds(10))
+          val streamingMap = {
+            val selector = config.asInstanceOf[CloudantChangesConfig].getSelector
+            if (selector != null) {
+              Map(
+                "database" -> config.getDbname,
+                "selector" -> selector
+              )
+            } else {
+              Map(
+                "database" -> config.getDbname
+              )
+            }
+          }
+          val changes = ssc.receiverStream(
+            new CloudantReceiver(sqlContext.sparkContext.getConf, streamingMap))
+          changes.persist(config.asInstanceOf[CloudantChangesConfig]
+            .getStorageLevelForStreaming)
+          // Global RDD that's created from union of all RDDs
+          var globalRDD = ssc.sparkContext.emptyRDD[String]
+
+          logger.info("Loading data from Cloudant using "
+            + config.asInstanceOf[CloudantChangesConfig].getContinuousChangesUrl)
+
+          // Collect and union each RDD to convert all RDDs to a DataFrame
+          changes.foreachRDD((rdd: RDD[String]) => {
+            if (!rdd.isEmpty()) {
+              if (globalRDD != null) {
+                // Union RDDs in foreach loop
+                globalRDD = globalRDD.union(rdd)
+              } else {
+                globalRDD = rdd
+              }
+            } else {
+              // Convert final global RDD[String] to DataFrame
+              dataFrame = sqlContext.sparkSession.read.json(globalRDD)
+              ssc.stop(stopSparkContext = false, stopGracefully = false)
+            }
+          })
+
+          ssc.start
+          // run streaming until all docs from continuous feed are received
+          ssc.awaitTermination
+          // ssc.stop(stopSparkContext = false, stopGracefully = false)
+
+          dataFrame.schema
         }
       }
       CloudantReadWriteRelation(config, schema, dataFrame)(sqlContext)
