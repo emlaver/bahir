@@ -124,6 +124,13 @@ class DefaultSource extends RelationProvider
           /* Create a streaming context to handle transforming docs in
           * larger databases into Spark datasets
           */
+          /* Allow the raw data and persisted RDDs to be accessible outside
+          * of the streaming context.
+          * See https://spark.apache.org/docs/latest/configuration.html
+          * for more details.
+          */
+          sqlContext.sparkSession.conf.set("spark.streaming.unpersist", "false")
+
           val ssc = new StreamingContext(sqlContext.sparkContext, Seconds(10))
           val streamingMap = {
             val selector = config.asInstanceOf[CloudantChangesConfig].getSelector
@@ -138,10 +145,12 @@ class DefaultSource extends RelationProvider
               )
             }
           }
+
           val changes = ssc.receiverStream(
             new CloudantReceiver(sqlContext.sparkContext.getConf, streamingMap))
           changes.persist(config.asInstanceOf[CloudantChangesConfig]
             .getStorageLevelForStreaming)
+
           // Global RDD that's created from union of all RDDs
           var globalRDD = ssc.sparkContext.emptyRDD[String]
 
