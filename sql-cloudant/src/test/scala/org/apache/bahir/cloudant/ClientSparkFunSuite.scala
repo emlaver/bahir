@@ -117,19 +117,19 @@ class ClientSparkFunSuite extends SparkFunSuite {
     if (shouldRunTests) {
       test(testName)(testBody)
     } else {
-      ignore(s"$testName [enable by setting env var ${TestUtils.getUsername} and " +
-        s"${TestUtils.getPassword}]")(testBody)
+      ignore(s"$testName [enable by setting env var CLOUDANT_USER and " +
+        s"CLOUDANT_PASSWORD]")(testBody)
     }
   }
 
 
-  /** Run the give body of code only if tests are enabled */
+  /** Run the body of code only if tests are enabled */
   def runIfTestsEnabled(message: String)(body: => Unit): Unit = {
     if (shouldRunTests) {
       body
     } else {
-      ignore(s"$message [enable by setting env var ${TestUtils.getUsername} and " +
-        s"${TestUtils.getPassword}]")(())
+      ignore(s"$message [enable by setting env var CLOUDANT_USER and " +
+        s"CLOUDANT_PASSWORD]")(())
     }
   }
 }
