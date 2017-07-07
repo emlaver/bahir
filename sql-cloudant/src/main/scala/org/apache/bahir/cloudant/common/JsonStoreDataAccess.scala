@@ -121,54 +121,8 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
       (implicit columns: Array[String] = null,
       postData: String = null) : T = {
     logger.info(s"Loading data from Cloudant using: $url , postData: $postData")
-    val requestTimeout = config.requestTimeout.toInt
-    val selector: String = if (config.getSelector != null) {
-      "{\"selector\":" + config.getSelector + "}"
-    } else {
-      // Selector for filtering out design docs in _changes feed
-      "{\"selector\": { \"_id\": { \"$regex\": \"^(?!.*_design/)\" } }}"
-    }
-    val clRequest: HttpRequest = config.username match {
-      case null =>
-        if (postData != null) {
-          Http(url)
-            .postData(postData)
-            .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-            .header("Content-Type", "application/json")
-            .header("User-Agent", "spark-cloudant")
-        } else if (url.indexOf("filter=_selector") > 0) {
-          Http(url)
-            .postData(selector)
-            .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-            .header("Content-Type", "application/json")
-            .header("User-Agent", "spark-cloudant")
-        } else {
-          Http(url)
-            .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-            .header("User-Agent", "spark-cloudant")
-        }
-      case _ =>
-        if (postData != null) {
-          Http(url)
-          .postData(postData)
-          .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-            .header("Content-Type", "application/json")
-            .header("User-Agent", "spark-cloudant")
-          .auth(config.username, config.password)
-        } else if (url.indexOf("filter=_selector") > 0) {
-          Http(url)
-            .postData(selector)
-            .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-            .header("Content-Type", "application/json")
-            .header("User-Agent", "spark-cloudant")
-            .auth(config.username, config.password)
-        } else {
-          Http(url)
-            .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-            .header("User-Agent", "spark-cloudant")
-            .auth(config.username, config.password)
-        }
-    }
+
+    val clRequest: HttpRequest = getClRequest(url, postData)
 
     val clResponse: HttpResponse[String] = clRequest.execute()
     if (! clResponse.isSuccess) {
@@ -182,20 +136,7 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
 
   def createDB(): Unit = {
     val url = config.getDbUrl.toString
-    val requestTimeout = config.requestTimeout.toInt
-    val clRequest: HttpRequest = config.username match {
-      case null =>
-        Http(url)
-          .method("put")
-          .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-          .header("User-Agent", "spark-cloudant")
-      case _ =>
-        Http(url)
-          .method("put")
-          .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-          .header("User-Agent", "spark-cloudant")
-          .auth(config.username, config.password)
-    }
+    val clRequest: HttpRequest = getClRequest(url, null, "PUT")
 
     val clResponse: HttpResponse[String] = clRequest.execute()
     if (! clResponse.isSuccess) {
@@ -207,23 +148,51 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
   }
 
 
-  def getClPostRequest(data: String): HttpRequest = {
-    val url = config.getBulkPostUrl.toString
+  def getClRequest(url: String, postData: String = null,
+                   httpMethod: String = null): HttpRequest = {
     val requestTimeout = config.requestTimeout.toInt
     config.username match {
       case null =>
-        Http(url)
-          .postData(data)
-          .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-          .header("Content-Type", "application/json")
-          .header("User-Agent", "spark-cloudant")
+        if (postData != null) {
+          Http(url)
+            .postData(postData)
+            .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
+            .header("Content-Type", "application/json")
+            .header("User-Agent", "spark-cloudant")
+        } else {
+          if (httpMethod != null) {
+            Http(url)
+              .method(httpMethod)
+              .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
+              .header("User-Agent", "spark-cloudant")
+          } else {
+            Http(url)
+              .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
+              .header("User-Agent", "spark-cloudant")
+          }
+        }
       case _ =>
-        Http(url)
-          .postData(data)
-          .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-          .header("Content-Type", "application/json")
-          .header("User-Agent", "spark-cloudant")
-          .auth(config.username, config.password)
+        if (postData != null) {
+          Http(url)
+            .postData(postData)
+            .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
+            .header("Content-Type", "application/json")
+            .header("User-Agent", "spark-cloudant")
+            .auth(config.username, config.password)
+        } else {
+          if (httpMethod != null) {
+            Http(url)
+              .method(httpMethod)
+              .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
+              .header("User-Agent", "spark-cloudant")
+              .auth(config.username, config.password)
+          } else {
+            Http(url)
+              .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
+              .header("User-Agent", "spark-cloudant")
+              .auth(config.username, config.password)
+          }
+        }
     }
   }
 
@@ -236,8 +205,9 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
     logger.debug(s"total records:${rows.size}=bulkSize:$bulkSize * totalBulks:$totalBulks")
 
     val futures = bulks.map( bulk => {
-        val data = config.getBulkRows(bulk)
-        val clRequest: HttpRequest = getClPostRequest(data)
+      val data = config.getBulkRows(bulk)
+      val url = config.getBulkPostUrl.toString
+      val clRequest: HttpRequest = getClRequest(url, data)
         Future {
           clRequest.execute()
         }

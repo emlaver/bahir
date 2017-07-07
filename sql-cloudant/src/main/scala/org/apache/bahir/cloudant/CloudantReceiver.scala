@@ -68,8 +68,11 @@ class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String]
         scala.io.Source.fromInputStream(is, "utf-8").getLines().foreach(line => {
           if (line.length() > 0) {
             val json = Json.parse(line)
-            val jsonDoc = (json \ "doc").get
-            val doc = Json.stringify(jsonDoc)
+            val jsonDoc = (json \ "doc").getOrElse(null)
+            var doc = ""
+            if(jsonDoc != null) {
+              doc = Json.stringify(jsonDoc)
+            }
             store(doc)
           }
         })
