@@ -31,11 +31,11 @@ The `--packages` argument can also be used with `bin/spark-submit`.
 
 Submit a job in Python:
     
-    spark-submit  --master local[4] --jars <path to cloudant-spark.jar>  <path to python script> 
+    spark-submit  --master local[4] --packages org.apache.bahir:spark-sql-cloudant_2.11:2.2.0-SNAPSHOT  <path to python script> 
     
 Submit a job in Scala:
 
-	spark-submit --class "<your class>" --master local[4] --jars <path to cloudant-spark.jar> <path to your app jar>
+	spark-submit --class "<your class>" --master local[4] --packages org.apache.bahir:spark-sql-cloudant_2.11:2.2.0-SNAPSHOT <path to spark-sql-cloudant jar>
 
 This library is compiled for Scala 2.11 only, and intends to support Spark 2.0 onwards.
 
@@ -73,21 +73,26 @@ schemaSampleSize|-1| the sample size for RDD schema discovery. 1 means we are us
 createDBOnSave|false| whether to create a new database during save operation. If false, a database should already exist. If true, a new database will be created. If true, and a database with a provided name already exists, an error will be raised. 
 
 The `cloudant.apiReceiver` option allows for _changes or _all_docs API endpoint to be called while loading Cloudant data into Spark DataFrames or SQL Tables,
-or saving data from DataFrames or SQL Tables to a Cloudant database.  
+or saving data from DataFrames or SQL Tables to a Cloudant database.
 
 **Note:** When using `_changes` API, please consider: 
 1. Results are partially ordered and may not be be presented in order in 
 which documents were updated.
 2. In case of shards' unavailability, you may see duplicate results (changes that have been seen already)
-3. Can use `selector` option to retrieve all revisions for docs
-4. Only supports single threaded
+3. Can use `selector` option to filter Cloudant docs during load
+4. Supports a real snapshot of the database and represents it in a single point of time.
+5. Only supports single threaded
+
 
 When using `_all_docs` API:
 1. Supports parallel reads (using offset and range)
+2. Using partitions may not represent the true snapshot of a database.  Some docs
+   may be added or deleted in the database between loading data into different 
+   Spark partitions.
 
 Performance of `_changes` API is still better in most cases (even with single threaded support). 
-During several performance tests using 50 to 200 MB Cloudant databases, load time from Cloudant to Spark using `_changes` 
-feed was faster to complete every time compared to `_all_docs`.
+During several performance tests using 200 MB to 15 GB Cloudant databases, load time from Cloudant to Spark using 
+`_changes` feed was faster to complete every time compared to `_all_docs`.
  
 See [CloudantChangesDFSuite](src/test/scala/org/apache/bahir/cloudant/CloudantChangesDFSuite.scala) 
 for examples of loading data into a Spark DataFrame with `_changes` API.
@@ -104,8 +109,13 @@ database| | Cloudant database name
 index| | Cloudant search index w/o the database name. only used for load data with less than or equal to 200 results.
 path| | Cloudant: as database name if database is not present
 schemaSampleSize|-1| the sample size used to discover the schema for this temp table. -1 scans all documents
-selector| all documents| a selector written in Cloudant Query syntax, specifying conditions for selecting documents. Only documents satisfying the selector's conditions will be retrieved from Cloudant and loaded into Spark.
-view|| Cloudant view w/o the database name. only used for load.
+selector|all documents| a selector written in Cloudant Query syntax, specifying conditions for selecting documents when the `cloudant.apiReceiver` option is set to `_changes`. Only documents satisfying the selector's conditions will be retrieved from Cloudant and loaded into Spark.
+storageLevel|MEMORY_ONLY_SER| the storage level when persisting Spark data sets during load when `cloudant.apiReceiver` option equals `_changes`
+view| | Cloudant view w/o the database name. only used for load.
+
+If loading Cloudant docs from a database greater than 200 MB, set `cloudant.apiReceiver`to `_changes`.  This will enable
+RDD persistence during load and allow the persisted RDDs to be accessible after streaming completes.  
+See the [Spark Programming Guide](https://spark.apache.org/docs/latest/programming-guide.html#rdd-persistence) for more details on persistence and valid storage level options to use with `storageLevel` option.
 
 For fast loading, views are loaded without include_docs. Thus, a derived schema will always be: `{id, key, value}`, where `value `can be a compount field. An example of loading data from a view: 
 
