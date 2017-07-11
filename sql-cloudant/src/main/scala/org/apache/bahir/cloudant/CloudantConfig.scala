@@ -28,18 +28,18 @@ import org.apache.bahir.cloudant.common._
 */
 
 class CloudantConfig(val protocol: String, val host: String,
-    val dbName: String, val indexName: String, val viewName: String)
-    (implicit val username: String, val password: String,
-    val partitions: Int, val maxInPartition: Int, val minInPartition: Int,
-    val requestTimeout: Long, val bulkSize: Int, val schemaSampleSize: Int,
-    val createDBOnSave: Boolean, val apiReceiver: String,
-    val useQuery: Boolean = false, val queryLimit: Int)
-    extends Serializable {
+                     val dbName: String, val indexName: String, val viewName: String)
+                    (implicit val username: String, val password: String,
+                     val partitions: Int, val maxInPartition: Int, val minInPartition: Int,
+                     val requestTimeout: Long, val bulkSize: Int, val schemaSampleSize: Int,
+                     val createDBOnSave: Boolean, val endpoint: String,
+                     val useQuery: Boolean = false, val queryLimit: Int)
+  extends Serializable {
 
   lazy val dbUrl: String = {protocol + "://" + host + "/" + dbName}
 
   val pkField = "_id"
-  val defaultIndex: String = apiReceiver
+  val defaultIndex: String = endpoint
   val default_filter: String = "*:*"
 
   def getDbUrl: String = {
@@ -106,10 +106,10 @@ class CloudantConfig(val protocol: String, val host: String,
   def allowPartition(queryUsed: Boolean): Boolean = {indexName==null && !queryUsed}
 
   def getRangeUrl(field: String = null, start: Any = null,
-      startInclusive: Boolean = false, end: Any = null,
-      endInclusive: Boolean = false,
-      includeDoc: Boolean = true,
-      allowQuery: Boolean = false): (String, Boolean, Boolean) = {
+                  startInclusive: Boolean = false, end: Any = null,
+                  endInclusive: Boolean = false,
+                  includeDoc: Boolean = true,
+                  allowQuery: Boolean = false): (String, Boolean, Boolean) = {
     val (url: String, pusheddown: Boolean, queryUsed: Boolean) =
       calculate(field, start, startInclusive, end, endInclusive, allowQuery)
     if (includeDoc && !queryUsed ) {
@@ -148,8 +148,9 @@ class CloudantConfig(val protocol: String, val host: String,
     }
   }
 
-  private def calculate(field: String, start: Any, startInclusive: Boolean,
-      end: Any, endInclusive: Boolean, allowQuery: Boolean): (String, Boolean, Boolean) = {
+  private def calculate(field: String, start: Any,
+                        startInclusive: Boolean, end: Any, endInclusive: Boolean,
+                        allowQuery: Boolean): (String, Boolean, Boolean) = {
     if (field != null && field.equals(pkField)) {
       var condition = ""
       if (start != null && end != null && start.equals(end)) {
@@ -157,7 +158,7 @@ class CloudantConfig(val protocol: String, val host: String,
       } else {
         if (start != null) {
           condition += "?startkey=%22" + URLEncoder.encode(
-              start.toString, "UTF-8") + "%22"
+            start.toString, "UTF-8") + "%22"
         }
         if (end != null) {
           if (start != null) {
@@ -185,7 +186,7 @@ class CloudantConfig(val protocol: String, val host: String,
   }
 
   def calculateCondition(field: String, min: Any, minInclusive: Boolean = false,
-        max: Any, maxInclusive: Boolean = false) : String = {
+                         max: Any, maxInclusive: Boolean = false) : String = {
     if (field != null && (min != null || max!= null)) {
       var condition = field + ":"
       if (min!=null && max!=null && min.equals(max)) {

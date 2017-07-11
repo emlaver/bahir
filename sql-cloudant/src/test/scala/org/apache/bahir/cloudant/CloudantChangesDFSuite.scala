@@ -20,7 +20,7 @@ package org.apache.bahir.cloudant
 import org.apache.spark.sql.SparkSession
 
 class CloudantChangesDFSuite extends ClientSparkFunSuite {
-  val apiReceiver = "_changes"
+  val endpoint = "_changes"
 
   override def beforeAll() {
     runIfTestsEnabled("Prepare Cloudant test databases") {
@@ -30,7 +30,7 @@ class CloudantChangesDFSuite extends ClientSparkFunSuite {
         .config("cloudant.host", TestUtils.getHost)
         .config("cloudant.username", TestUtils.getUsername)
         .config("cloudant.password", TestUtils.getPassword)
-        .config("cloudant.apiReceiver", apiReceiver)
+        .config("cloudant.endpoint", endpoint)
         .getOrCreate()
     }
   }

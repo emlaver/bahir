@@ -27,9 +27,11 @@ import org.apache.bahir.cloudant.common._
 
 class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String])
     extends Receiver[String](StorageLevel.MEMORY_AND_DISK) {
+  // CloudantChangesConfig requires `_changes` endpoint option
   lazy val config: CloudantChangesConfig = {
-    JsonStoreConfigManager.getConfig(sparkConf, cloudantParams)
-      .asInstanceOf[CloudantChangesConfig]
+    JsonStoreConfigManager.getConfig(sparkConf, cloudantParams
+      + ("cloudant.endpoint" -> JsonStoreConfigManager.CHANGES_INDEX)
+    ).asInstanceOf[CloudantChangesConfig]
   }
 
   def onStart() {

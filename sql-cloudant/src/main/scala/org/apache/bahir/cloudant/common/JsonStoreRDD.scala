@@ -56,7 +56,7 @@ class JsonStoreRDD(sc: SparkContext, config: CloudantConfig)
 
   private def getTotalPartition(totalRows: Int, queryUsed: Boolean): Int = {
     // Note: _changes API does not work for partition
-    if (config.apiReceiver == JsonStoreConfigManager.CHANGES_INDEX) {
+    if (config.endpoint == JsonStoreConfigManager.CHANGES_INDEX) {
       1
     } else {
       if (totalRows == 0 || ! config.allowPartition(queryUsed) )  {

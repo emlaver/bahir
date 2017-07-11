@@ -40,13 +40,13 @@ class CloudantOptionSuite extends ClientSparkFunSuite with BeforeAndAfter {
       .config("cloudant.host", TestUtils.getHost)
       .config("cloudant.username", TestUtils.getUsername)
       .config("cloudant.password", TestUtils.getPassword)
-      .config("cloudant.apiReceiver", "_invalid_endpoint")
+      .config("cloudant.endpoint", "_invalid_endpoint")
       .getOrCreate()
 
     val thrown = intercept[CloudantException] {
       spark.read.format("org.apache.bahir.cloudant").load("db")
     }
-    assert(thrown.getMessage === s"spark.cloudant.apiReceiver parameter " +
+    assert(thrown.getMessage === s"spark.cloudant.endpoint parameter " +
       s"is invalid. Please supply the valid option '_all_docs' or '_changes'.")
 
   }

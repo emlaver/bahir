@@ -34,7 +34,7 @@ object JsonStoreConfigManager {
   private val CLOUDANT_USERNAME_CONFIG = "cloudant.username"
   private val CLOUDANT_PASSWORD_CONFIG = "cloudant.password"
   private val CLOUDANT_PROTOCOL_CONFIG = "cloudant.protocol"
-  private val CLOUDANT_API_RECEIVER = "cloudant.apiReceiver"
+  private val CLOUDANT_API_ENDPOINT = "cloudant.endpoint"
   private val USE_QUERY_CONFIG = "cloudant.useQuery"
   private val QUERY_LIMIT_CONFIG = "cloudant.queryLimit"
   private val FILTER_SELECTOR = "selector"
@@ -171,7 +171,7 @@ object JsonStoreConfigManager {
     implicit val bulkSize = getInt(sparkConf, parameters, BULK_SIZE_CONFIG)
     implicit val schemaSampleSize = getInt(sparkConf, parameters, SCHEMA_SAMPLE_SIZE_CONFIG)
     implicit val createDBOnSave = getBool(sparkConf, parameters, CREATE_DB_ON_SAVE_CONFIG)
-    implicit val apiReceiver = getString(sparkConf, parameters, CLOUDANT_API_RECEIVER)
+    implicit val endpoint = getString(sparkConf, parameters, CLOUDANT_API_ENDPOINT)
     implicit val selector = getString(sparkConf, parameters, FILTER_SELECTOR)
     implicit val storageLevel = getStorageLevel(
       sparkConf, parameters, STORAGE_LEVEL_FOR_CHANGES_INDEX)
@@ -190,18 +190,18 @@ object JsonStoreConfigManager {
     val user = getString(sparkConf, parameters, CLOUDANT_USERNAME_CONFIG)
     val passwd = getString(sparkConf, parameters, CLOUDANT_PASSWORD_CONFIG)
 
-    if (apiReceiver == ALL_DOCS_INDEX) {
+    if (endpoint == ALL_DOCS_INDEX) {
       new CloudantConfig(protocol, host, dbName, indexName,
         viewName) (user, passwd, total, max, min, requestTimeout, bulkSize,
-        schemaSampleSize, createDBOnSave, apiReceiver, useQuery,
+        schemaSampleSize, createDBOnSave, endpoint, useQuery,
         queryLimit)
-    } else if (apiReceiver == CHANGES_INDEX) {
+    } else if (endpoint == CHANGES_INDEX) {
       new CloudantChangesConfig(protocol, host, dbName, indexName,
         viewName) (user, passwd, total, max, min, requestTimeout, bulkSize,
-        schemaSampleSize, createDBOnSave, apiReceiver, selector, storageLevel,
+        schemaSampleSize, createDBOnSave, endpoint, selector, storageLevel,
         useQuery, queryLimit)
     } else {
-      throw new CloudantException(s"spark.$CLOUDANT_API_RECEIVER parameter " +
+      throw new CloudantException(s"spark.$CLOUDANT_API_ENDPOINT parameter " +
         s"is invalid. Please supply the valid option '" + ALL_DOCS_INDEX + "' or '" +
         CHANGES_INDEX + "'.")
     }

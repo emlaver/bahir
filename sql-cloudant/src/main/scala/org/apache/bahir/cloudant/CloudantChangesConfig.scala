@@ -23,20 +23,20 @@ class CloudantChangesConfig(protocol: String, host: String, dbName: String,
                            (username: String, password: String, partitions: Int,
                             maxInPartition: Int, minInPartition: Int, requestTimeout: Long,
                             bulkSize: Int, schemaSampleSize: Int,
-                            createDBOnSave: Boolean, apiReceiver: String, selector: String,
+                            createDBOnSave: Boolean, endpoint: String, selector: String,
                             storageLevel: StorageLevel, useQuery: Boolean, queryLimit: Int)
   extends CloudantConfig(protocol, host, dbName, indexName, viewName)(username, password,
     partitions, maxInPartition, minInPartition, requestTimeout, bulkSize, schemaSampleSize,
-    createDBOnSave, apiReceiver, useQuery, queryLimit) {
+    createDBOnSave, endpoint, useQuery, queryLimit) {
 
-  override val defaultIndex: String = apiReceiver
+  override val defaultIndex: String = endpoint
 
   def getSelector : String = {
     if (selector != null && !selector.isEmpty) {
       selector
     } else {
       // Exclude design docs
-      "{ \"_id\": { \"$regex\": \"^(?!.*_design/)\" } }"
+      "{ \"_id\": { \"$regex\": \"^(?!_design/)\" } }"
     }
   }
 

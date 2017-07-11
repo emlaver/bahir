@@ -20,6 +20,8 @@ package org.apache.bahir.cloudant
 import org.apache.spark.sql.SparkSession
 
 class CloudantAllDocsDFSuite extends ClientSparkFunSuite {
+  val endpoint = "_all_docs"
+
   override def beforeAll() {
     runIfTestsEnabled("Prepare Cloudant test databases") {
       super.beforeAll()
@@ -28,6 +30,7 @@ class CloudantAllDocsDFSuite extends ClientSparkFunSuite {
         .config("cloudant.host", TestUtils.getHost)
         .config("cloudant.username", TestUtils.getUsername)
         .config("cloudant.password", TestUtils.getPassword)
+        .config("cloudant.endpoint", endpoint)
         .getOrCreate()
     }
   }

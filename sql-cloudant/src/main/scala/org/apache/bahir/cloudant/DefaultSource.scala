@@ -176,7 +176,6 @@ class DefaultSource extends RelationProvider
           ssc.start
           // run streaming until all docs from continuous feed are received
           ssc.awaitTermination
-          // ssc.stop(stopSparkContext = false, stopGracefully = false)
 
           dataFrame.schema
         }
