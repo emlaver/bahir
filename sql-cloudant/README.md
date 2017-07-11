@@ -109,8 +109,8 @@ selector|all documents| a selector written in Cloudant Query syntax, specifying 
 storageLevel|MEMORY_ONLY| the storage level for persisting Spark RDDs during load when `cloudant.endpoint` is set to `_changes`.  See [RDD Persistence section](https://spark.apache.org/docs/latest/programming-guide.html#rdd-persistence) in Spark's Progamming Guide for all available storage level options.
 view| | Cloudant view w/o the database name. only used for load.
 
-If loading Cloudant docs from a database greater than 200 MB, set `cloudant.endpoint` to `_changes`.  This will enable
-RDD persistence during load and allow the persisted RDDs to be accessible after streaming completes.  
+If loading Cloudant docs from a database greater than 200 MB, set `cloudant.endpoint` to `_changes` and `spark.streaming.unpersist` to `false`.
+This will enable RDD persistence during load against `_changes` endpoint and allow the persisted RDDs to be accessible after streaming completes.  
 See the [Spark Programming Guide](https://spark.apache.org/docs/latest/programming-guide.html#rdd-persistence) for more details on persistence and valid storage level options to use with `storageLevel` option.
 
 For fast loading, views are loaded without include_docs. Thus, a derived schema will always be: `{id, key, value}`, where `value `can be a compount field. An example of loading data from a view: 
