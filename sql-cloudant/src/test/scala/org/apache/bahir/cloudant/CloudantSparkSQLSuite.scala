@@ -27,7 +27,7 @@ class CloudantSparkSQLSuite extends ClientSparkFunSuite {
 
   import testImplicits._
 
-  val apiReceiver = "_all_docs"
+  val endpoint = "_all_docs"
 
   override def beforeAll() {
     runIfTestsEnabled("Prepare Cloudant test databases") {
@@ -37,7 +37,7 @@ class CloudantSparkSQLSuite extends ClientSparkFunSuite {
         .config("cloudant.host", TestUtils.getHost)
         .config("cloudant.username", TestUtils.getUsername)
         .config("cloudant.password", TestUtils.getPassword)
-        .config("cloudant.apiReceiver", apiReceiver)
+        .config("cloudant.endpoint", endpoint)
         .getOrCreate()
     }
   }
