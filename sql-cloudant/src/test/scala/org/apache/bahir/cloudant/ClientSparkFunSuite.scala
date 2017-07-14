@@ -38,16 +38,19 @@ class ClientSparkFunSuite extends SparkFunSuite {
   var spark: SparkSession = _
 
   override def beforeAll() {
+    runIfTestsEnabled("Prepare Cloudant test databases") {
       tempDir.mkdirs()
       tempDir.deleteOnExit()
       setupClient()
       createTestDbs()
-  }
+    }
+}
 
   override def afterAll() {
     TestUtils.deleteRecursively(tempDir)
     deleteTestDbs()
     teardownClient()
+    spark.close()
   }
 
   def setupClient() {
@@ -73,7 +76,6 @@ class ClientSparkFunSuite extends SparkFunSuite {
   }
 
   def createTestDbs() {
-    val databases: util.List[String] = client.getAllDbs
     // create each test database
     // insert docs and design docs from JSON flat files
     for (dbName: String <- TestUtils.testDatabasesList) {

@@ -23,21 +23,16 @@ class CloudantChangesDFSuite extends ClientSparkFunSuite {
   val endpoint = "_changes"
 
   override def beforeAll() {
-    runIfTestsEnabled("Prepare Cloudant test databases") {
-      super.beforeAll()
-      spark = SparkSession.builder().config(conf)
-        .config("cloudant.protocol", TestUtils.getProtocol)
-        .config("cloudant.host", TestUtils.getHost)
-        .config("cloudant.username", TestUtils.getUsername)
-        .config("cloudant.password", TestUtils.getPassword)
-        .config("cloudant.endpoint", endpoint)
-        .getOrCreate()
-    }
+    super.beforeAll()
+    spark = SparkSession.builder().config(conf)
+      .config("cloudant.protocol", TestUtils.getProtocol)
+      .config("cloudant.host", TestUtils.getHost)
+      .config("cloudant.username", TestUtils.getUsername)
+      .config("cloudant.password", TestUtils.getPassword)
+      .config("cloudant.endpoint", endpoint)
+      .getOrCreate()
   }
-  override def afterAll(): Unit = {
-    super.afterAll()
-    spark.close()
-  }
+
 
   testIfEnabled("load and save data from Cloudant database") {
     // Loading data from Cloudant db

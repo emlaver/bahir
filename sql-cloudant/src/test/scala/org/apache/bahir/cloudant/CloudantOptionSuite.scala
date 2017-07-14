@@ -25,12 +25,6 @@ import org.apache.bahir.cloudant.common.CloudantException
 
 class CloudantOptionSuite extends ClientSparkFunSuite with BeforeAndAfter {
 
-  override def beforeAll() {
-    runIfTestsEnabled("Prepare Cloudant test databases") {
-      super.beforeAll()
-    }
-  }
-
   after {
     spark.close()
   }
