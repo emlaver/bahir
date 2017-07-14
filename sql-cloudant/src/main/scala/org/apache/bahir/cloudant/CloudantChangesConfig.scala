@@ -18,13 +18,16 @@ package org.apache.bahir.cloudant
 
 import org.apache.spark.storage.StorageLevel
 
+import org.apache.bahir.cloudant.common.JsonStoreConfigManager
+
 class CloudantChangesConfig(protocol: String, host: String, dbName: String,
                             indexName: String = null, viewName: String = null)
                            (username: String, password: String, partitions: Int,
                             maxInPartition: Int, minInPartition: Int, requestTimeout: Long,
                             bulkSize: Int, schemaSampleSize: Int,
                             createDBOnSave: Boolean, endpoint: String, selector: String,
-                            storageLevel: StorageLevel, useQuery: Boolean, queryLimit: Int)
+                            timeout: Int, storageLevel: StorageLevel, useQuery: Boolean,
+                            queryLimit: Int)
   extends CloudantConfig(protocol, host, dbName, indexName, viewName)(username, password,
     partitions, maxInPartition, minInPartition, requestTimeout, bulkSize, schemaSampleSize,
     createDBOnSave, endpoint, useQuery, queryLimit) {
@@ -60,5 +63,18 @@ class CloudantChangesConfig(protocol: String, host: String, dbName: String,
       url = url + "&filter=_selector"
     }
     url
+  }
+
+  def getChangesReceiverUrl: String = {
+    var url = dbUrl + "/" + defaultIndex + "?include_docs=true&feed=continuous&timeout=" + timeout
+    if (selector != null) {
+      url = url + "&filter=_selector"
+    }
+    url
+  }
+
+  // Use _all_docs endpoint for getting the total number of docs
+  def getTotalUrl: String = {
+    dbUrl + "/" + JsonStoreConfigManager.ALL_DOCS_INDEX
   }
 }

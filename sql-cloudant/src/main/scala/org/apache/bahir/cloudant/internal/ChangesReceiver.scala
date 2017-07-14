@@ -14,8 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.bahir.cloudant
+package org.apache.bahir.cloudant.internal
 
+import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json.Json
 import scalaj.http._
 
@@ -23,16 +24,12 @@ import org.apache.spark.SparkConf
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.receiver.Receiver
 
+import org.apache.bahir.cloudant.CloudantChangesConfig
 import org.apache.bahir.cloudant.common._
 
-class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String])
-    extends Receiver[String](StorageLevel.MEMORY_AND_DISK) {
-  // CloudantChangesConfig requires `_changes` endpoint option
-  lazy val config: CloudantChangesConfig = {
-    JsonStoreConfigManager.getConfig(sparkConf, cloudantParams
-      + ("cloudant.endpoint" -> JsonStoreConfigManager.CHANGES_INDEX)
-    ).asInstanceOf[CloudantChangesConfig]
-  }
+
+class ChangesReceiver(config: CloudantChangesConfig)
+  extends Receiver[String](StorageLevel.MEMORY_AND_DISK) {
 
   def onStart() {
     // Start the thread that receives data over a connection
@@ -42,29 +39,18 @@ class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String]
   }
 
   private def receive(): Unit = {
-    val url = config.getContinuousChangesUrl.toString
-    val selector: String = if (config.getSelector != null) {
+    // Get total number of docs in database using _all_docs endpoint
+    val limit = new JsonStoreDataAccess(config)
+      .getTotalRows(config.getTotalUrl, queryUsed = false)
+
+    // Get continuous _changes url
+    val url = config.getChangesReceiverUrl.toString
+    val selector: String = {
       "{\"selector\":" + config.getSelector + "}"
-    } else {
-      "{}"
     }
 
-    val clRequest: HttpRequest = config.username match {
-      case null =>
-        Http(url)
-          .postData(selector)
-          .timeout(connTimeoutMs = 1000, readTimeoutMs = 0)
-          .header("Content-Type", "application/json")
-          .header("User-Agent", "spark-cloudant")
-      case _ =>
-        Http(url)
-          .postData(selector)
-          .timeout(connTimeoutMs = 1000, readTimeoutMs = 0)
-          .header("Content-Type", "application/json")
-          .header("User-Agent", "spark-cloudant")
-          .auth(config.username, config.password)
-    }
-
+    var count = 0
+    val clRequest: HttpRequest = new JsonStoreDataAccess(config).getClRequest(url, selector)
     clRequest.exec((code, headers, is) => {
       if (code == 200) {
         scala.io.Source.fromInputStream(is, "utf-8").getLines().foreach(line => {
@@ -74,8 +60,14 @@ class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String]
             var doc = ""
             if(jsonDoc != null) {
               doc = Json.stringify(jsonDoc)
-              store(doc)
+              if(!doc.isEmpty) {
+                store(doc)
+                count += 1
+              }
             }
+          } else if (count >= limit) {
+            // exit loop once limit is reached
+            return
           }
         })
       } else {
@@ -86,6 +78,6 @@ class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String]
     })
   }
 
-  def onStop(): Unit = {
+  override def onStop(): Unit = {
   }
 }

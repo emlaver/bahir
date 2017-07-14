@@ -25,6 +25,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 
 import org.apache.bahir.cloudant.common.{JsonStoreDataAccess, JsonStoreRDD, _}
+import org.apache.bahir.cloudant.internal.ChangesReceiver
 
 case class CloudantReadWriteRelation (config: CloudantConfig,
                                       schema: StructType,
@@ -125,30 +126,17 @@ class DefaultSource extends RelationProvider
           * larger databases into Spark datasets
           */
           val ssc = new StreamingContext(sqlContext.sparkContext, Seconds(10))
-          val streamingMap = {
-            val selector = config.asInstanceOf[CloudantChangesConfig].getSelector
-            if (selector != null) {
-              Map(
-                "database" -> config.getDbname,
-                "selector" -> selector
-              )
-            } else {
-              Map(
-                "database" -> config.getDbname
-              )
-            }
-          }
 
+          val changesConfig = config.asInstanceOf[CloudantChangesConfig]
           val changes = ssc.receiverStream(
-            new CloudantReceiver(sqlContext.sparkContext.getConf, streamingMap))
-          changes.persist(config.asInstanceOf[CloudantChangesConfig]
-            .getStorageLevelForStreaming)
+            new ChangesReceiver(changesConfig))
+          changes.persist(changesConfig.getStorageLevelForStreaming)
 
           // Global RDD that's created from union of all RDDs
           var globalRDD = ssc.sparkContext.emptyRDD[String]
 
           logger.info("Loading data from Cloudant using "
-            + config.asInstanceOf[CloudantChangesConfig].getContinuousChangesUrl)
+            + changesConfig.getChangesReceiverUrl)
 
           // Collect and union each RDD to convert all RDDs to a DataFrame
           changes.foreachRDD((rdd: RDD[String]) => {

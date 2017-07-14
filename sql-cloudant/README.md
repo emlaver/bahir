@@ -57,20 +57,21 @@ Default values are defined in [here](src/main/resources/application.conf).
 
 Name | Default | Meaning
 --- |:---:| ---
-cloudant.endpoint|`_all_docs`| API endpoint for RelationProvider when loading data from Cloudant to DataFrames or SQL temporary tables. Select between the Cloudant `_all_docs` or `_changes` endpoint.  See **Note** below for differences between endpoints.
+cloudant.endpoint|`_all_docs`|endpoint for RelationProvider when loading data from Cloudant to DataFrames or SQL temporary tables. Select between the Cloudant `_all_docs` or `_changes` API endpoint.  See **Note** below for differences between endpoints.
 cloudant.protocol|https|protocol to use to transfer data: http or https
 cloudant.host| |cloudant host url
 cloudant.username| |cloudant userid
 cloudant.password| |cloudant password
-cloudant.useQuery|false|By default, `_all_docs` endpoint is used if configuration 'view' and 'index' (see below) are not set. When useQuery is enabled, `_find` endpoint will be used in place of `_all_docs` when query condition is not on primary key field (_id), so that query predicates may be driven into datastore. 
-cloudant.queryLimit|25|The maximum number of results returned when querying the `_find` endpoint.
+cloudant.useQuery|false|by default, `_all_docs` endpoint is used if configuration 'view' and 'index' (see below) are not set. When useQuery is enabled, `_find` endpoint will be used in place of `_all_docs` when query condition is not on primary key field (_id), so that query predicates may be driven into datastore. 
+cloudant.queryLimit|25|the maximum number of results returned when querying the `_find` endpoint.
+cloudant.timeout|60000|stop the response after waiting the defined number of milliseconds for data.  Only supported with `changes` endpoint.
 jsonstore.rdd.partitions|10|the number of partitions intent used to drive JsonStoreRDD loading query result in parallel. The actual number is calculated based on total rows returned and satisfying maxInPartition and minInPartition. Only supported with `_all_docs` endpoint.
 jsonstore.rdd.maxInPartition|-1|the max rows in a partition. -1 means unlimited
 jsonstore.rdd.minInPartition|10|the min rows in a partition.
-jsonstore.rdd.requestTimeout|900000| the request timeout in milliseconds
-bulkSize|200| the bulk save size
-schemaSampleSize|-1| the sample size for RDD schema discovery. 1 means we are using only the first document for schema discovery; -1 means all documents; 0 will be treated as 1; any number N means min(N, total) docs 
-createDBOnSave|false| whether to create a new database during save operation. If false, a database should already exist. If true, a new database will be created. If true, and a database with a provided name already exists, an error will be raised. 
+jsonstore.rdd.requestTimeout|900000|the request timeout in milliseconds
+bulkSize|200|the bulk save size
+schemaSampleSize|-1|the sample size for RDD schema discovery. 1 means we are using only the first document for schema discovery; -1 means all documents; 0 will be treated as 1; any number N means min(N, total) docs 
+createDBOnSave|false|whether to create a new database during save operation. If false, a database should already exist. If true, a new database will be created. If true, and a database with a provided name already exists, an error will be raised. 
 
 The `cloudant.endpoint` option sets ` _changes` or `_all_docs` API endpoint to be called while loading Cloudant data into Spark DataFrames or SQL Tables.
 

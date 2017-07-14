@@ -35,6 +35,7 @@ object JsonStoreConfigManager {
   private val CLOUDANT_PASSWORD_CONFIG = "cloudant.password"
   private val CLOUDANT_PROTOCOL_CONFIG = "cloudant.protocol"
   private val CLOUDANT_API_ENDPOINT = "cloudant.endpoint"
+  private val CLOUDANT_CHANGES_TIMEOUT = "cloudant.timeout"
   private val USE_QUERY_CONFIG = "cloudant.useQuery"
   private val QUERY_LIMIT_CONFIG = "cloudant.queryLimit"
   private val FILTER_SELECTOR = "selector"
@@ -175,6 +176,7 @@ object JsonStoreConfigManager {
     implicit val selector = getString(sparkConf, parameters, FILTER_SELECTOR)
     implicit val storageLevel = getStorageLevel(
       sparkConf, parameters, STORAGE_LEVEL_FOR_CHANGES_INDEX)
+    implicit val timeout = getInt(sparkConf, parameters, CLOUDANT_CHANGES_TIMEOUT)
 
     implicit val useQuery = getBool(sparkConf, parameters, USE_QUERY_CONFIG)
     implicit val queryLimit = getInt(sparkConf, parameters, QUERY_LIMIT_CONFIG)
@@ -197,9 +199,9 @@ object JsonStoreConfigManager {
         queryLimit)
     } else if (endpoint == CHANGES_INDEX) {
       new CloudantChangesConfig(protocol, host, dbName, indexName,
-        viewName) (user, passwd, total, max, min, requestTimeout, bulkSize,
-        schemaSampleSize, createDBOnSave, endpoint, selector, storageLevel,
-        useQuery, queryLimit)
+        viewName) (user, passwd, total, max, min, requestTimeout,
+        bulkSize, schemaSampleSize, createDBOnSave, endpoint, selector,
+        timeout, storageLevel, useQuery, queryLimit)
     } else {
       throw new CloudantException(s"spark.$CLOUDANT_API_ENDPOINT parameter " +
         s"is invalid. Please supply the valid option '" + ALL_DOCS_INDEX + "' or '" +
