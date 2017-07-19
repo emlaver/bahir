@@ -106,7 +106,7 @@ Name | Default | Meaning
 bulkSize|200| the bulk save size
 createDBOnSave|false| whether to create a new database during save operation. If false, a database should already exist. If true, a new database will be created. If true, and a database with a provided name already exists, an error will be raised. 
 database| | Cloudant database name
-index| | Index queries are limited to returning 200 results so can only be used to load data with <= 200 results.
+index| | Cloudant Search index without the database name. Search index queries are limited to returning 200 results so can only be used to load data with <= 200 results.
 path| | Cloudant: as database name if database is not present
 schemaSampleSize|-1| the sample size used to discover the schema for this temp table. -1 scans all documents
 selector|all documents| a selector written in Cloudant Query syntax, specifying conditions for selecting documents when the `cloudant.endpoint` option is set to `_changes`. Only documents satisfying the selector's conditions will be retrieved from Cloudant and loaded into Spark.
