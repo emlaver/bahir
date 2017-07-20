@@ -31,9 +31,9 @@ import org.apache.spark.sql.SparkSession
 import org.apache.bahir.cloudant.TestUtils.shouldRunTests
 
 class ClientSparkFunSuite extends SparkFunSuite {
-  private var client: CloudantClient = _
   private val tempDir: File = new File(System.getProperty("java.io.tmpdir") + "/sql-cloudant/")
 
+  var client: CloudantClient = _
   val conf: SparkConf = new SparkConf().setMaster("local[4]")
   var spark: SparkSession = _
 

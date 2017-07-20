@@ -17,6 +17,8 @@
 
 package org.apache.bahir.cloudant
 
+import play.libs.Json
+
 import org.apache.spark.sql.SparkSession
 
 class CloudantChangesDFSuite extends ClientSparkFunSuite {
@@ -32,7 +34,6 @@ class CloudantChangesDFSuite extends ClientSparkFunSuite {
       .config("cloudant.endpoint", endpoint)
       .getOrCreate()
   }
-
 
   testIfEnabled("load and save data from Cloudant database") {
     // Loading data from Cloudant db
@@ -51,6 +52,20 @@ class CloudantChangesDFSuite extends ClientSparkFunSuite {
       .select("flightSegmentId", "scheduledDepartureTime")
       .orderBy(df("flightSegmentId")).count()
     assert(total == 50)
+  }
+
+  testIfEnabled("load data and verify deleted doc is not in results") {
+    val db = client.database("n_flight", false)
+    // Find then delete a doc to verify it's not included when loading data
+    val doc = db.find("003bd483-9f98-4203-afdd-c539a4f38d21")
+    val json = try {  Json.parse(doc) } finally { doc.close() }
+    db.remove(json.get("_id").textValue(), json.get("_rev").textValue())
+
+    val df = spark.read.format("org.apache.bahir.cloudant").load("n_flight")
+    // all docs in database minus the design doc and _deleted=true doc
+    assert(df.count() == 1966)
+
+    assert(!df.columns.contains("_deleted"))
   }
 
   testIfEnabled("load data and count rows in filtered dataframe") {

@@ -60,7 +60,9 @@ class ChangesReceiver(config: CloudantChangesConfig)
             var doc = ""
             if(jsonDoc != null) {
               doc = Json.stringify(jsonDoc)
-              if(!doc.isEmpty) {
+              // Verify that doc is not empty and is not deleted
+              val deleted = (jsonDoc \ "_deleted").getOrElse(null)
+              if(!doc.isEmpty && deleted == null) {
                 store(doc)
                 count += 1
               }
