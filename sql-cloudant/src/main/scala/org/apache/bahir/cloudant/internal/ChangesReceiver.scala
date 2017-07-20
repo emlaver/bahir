@@ -50,7 +50,22 @@ class ChangesReceiver(config: CloudantChangesConfig)
     }
 
     var count = 0
-    val clRequest: HttpRequest = new JsonStoreDataAccess(config).getClRequest(url, selector)
+    val clRequest: HttpRequest = config.username match {
+      case null =>
+        Http(url)
+          .postData(selector)
+          .timeout(connTimeoutMs = 1000, readTimeoutMs = 0)
+          .header("Content-Type", "application/json")
+          .header("User-Agent", "spark-cloudant")
+      case _ =>
+        Http(url)
+          .postData(selector)
+          .timeout(connTimeoutMs = 1000, readTimeoutMs = 0)
+          .header("Content-Type", "application/json")
+          .header("User-Agent", "spark-cloudant")
+          .auth(config.username, config.password)
+    }
+
     clRequest.exec((code, headers, is) => {
       if (code == 200) {
         scala.io.Source.fromInputStream(is, "utf-8").getLines().foreach(line => {

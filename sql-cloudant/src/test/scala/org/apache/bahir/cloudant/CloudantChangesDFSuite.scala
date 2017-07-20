@@ -24,15 +24,19 @@ import org.apache.spark.sql.SparkSession
 class CloudantChangesDFSuite extends ClientSparkFunSuite {
   val endpoint = "_changes"
 
-  override def beforeAll() {
-    super.beforeAll()
+  before {
     spark = SparkSession.builder().config(conf)
       .config("cloudant.protocol", TestUtils.getProtocol)
       .config("cloudant.host", TestUtils.getHost)
       .config("cloudant.username", TestUtils.getUsername)
       .config("cloudant.password", TestUtils.getPassword)
       .config("cloudant.endpoint", endpoint)
+      .config("spark.streaming.unpersist", "false")
       .getOrCreate()
+  }
+
+  after {
+    spark.close()
   }
 
   testIfEnabled("load and save data from Cloudant database") {

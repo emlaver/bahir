@@ -24,13 +24,14 @@ import java.util
 import com.cloudant.client.api.ClientBuilder
 import com.cloudant.client.api.CloudantClient
 import com.google.gson.{Gson, JsonArray, JsonObject}
+import org.scalatest.BeforeAndAfter
 
 import org.apache.spark.{SparkConf, SparkFunSuite}
 import org.apache.spark.sql.SparkSession
 
 import org.apache.bahir.cloudant.TestUtils.shouldRunTests
 
-class ClientSparkFunSuite extends SparkFunSuite {
+class ClientSparkFunSuite extends SparkFunSuite with BeforeAndAfter {
   private val tempDir: File = new File(System.getProperty("java.io.tmpdir") + "/sql-cloudant/")
 
   var client: CloudantClient = _
