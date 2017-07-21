@@ -38,11 +38,11 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
 
   def getMany(limit: Int)(implicit columns: Array[String] = null): Seq[String] = {
     if (limit == 0) {
-      throw new RuntimeException("Database " + config.getDbname +
+      throw new CloudantException("Database " + config.getDbname +
         " schema sample size is 0!")
     }
     if (limit < -1) {
-      throw new RuntimeException("Database " + config.getDbname +
+      throw new CloudantException("Database " + config.getDbname +
         " schema sample size is " + limit + "!")
     }
     var r = this.getQueryResult[Seq[String]](config.getUrl(limit), processAll)
@@ -51,7 +51,7 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
         processAll)
     }
     if (r.isEmpty) {
-      throw new RuntimeException("Database " + config.getDbname +
+      throw new CloudantException("Database " + config.getDbname +
         " doesn't have any non-design documents!")
     } else {
       r
@@ -126,7 +126,7 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
 
     val clResponse: HttpResponse[String] = clRequest.execute()
     if (! clResponse.isSuccess) {
-      throw new RuntimeException("Database " + config.getDbname +
+      throw new CloudantException("Database " + config.getDbname +
         " request error: " + clResponse.body)
     }
     val data = postProcessor(clResponse.body)
@@ -140,7 +140,7 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
 
     val clResponse: HttpResponse[String] = clRequest.execute()
     if (! clResponse.isSuccess) {
-      throw new RuntimeException("Database " + config.getDbname +
+      throw new CloudantException("Database " + config.getDbname +
         " create error: " + clResponse.body)
     } else {
       logger.warn(s"Database ${config.getDbname} was created.")
@@ -224,7 +224,7 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
           val isErr = (resBody contains config.getConflictErrStr) ||
             (resBody contains config.getForbiddenErrStr)
           if (!clResponse.isSuccess || isErr) {
-            val e = new RuntimeException("Save to database:" + config.getDbname +
+            val e = new CloudantException("Save to database:" + config.getDbname +
                 " failed with reason: " + clResponse.body)
             p.tryFailure(e)
           } else if (remaining.decrementAndGet() == 0) {
@@ -246,7 +246,7 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
     }
     mainFtr onFailure  {
       case e =>
-        throw new RuntimeException("Save to database:" + config.getDbname +
+        throw new CloudantException("Save to database:" + config.getDbname +
           " failed with reason: " + e.getMessage)
     }
     Await.result(mainFtr, (config.requestTimeout * totalBulks).millis) // scalastyle:ignore

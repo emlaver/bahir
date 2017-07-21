@@ -81,7 +81,7 @@ class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String]
       } else {
         val status = headers.getOrElse("Status", IndexedSeq.empty)
         val errorMsg = "Error retrieving _changes feed " + config.getDbname + ": " + status(0)
-        reportError(errorMsg, new RuntimeException(errorMsg))
+        reportError(errorMsg, new CloudantException(errorMsg))
       }
     })
   }
