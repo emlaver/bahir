@@ -69,20 +69,22 @@ class ChangesReceiver(config: CloudantChangesConfig)
     clRequest.exec((code, headers, is) => {
       if (code == 200) {
         scala.io.Source.fromInputStream(is, "utf-8").getLines().foreach(line => {
-          if (line.length() > 0) {
-            val json = Json.parse(line)
-            val jsonDoc = (json \ "doc").getOrElse(null)
-            var doc = ""
-            if(jsonDoc != null) {
-              doc = Json.stringify(jsonDoc)
-              // Verify that doc is not empty and is not deleted
-              val deleted = (jsonDoc \ "_deleted").getOrElse(null)
-              if(!doc.isEmpty && deleted == null) {
-                store(doc)
-                count += 1
+          if (count < limit) {
+            if (line.length() > 0) {
+              val json = Json.parse(line)
+              val jsonDoc = (json \ "doc").getOrElse(null)
+              var doc = ""
+              if (jsonDoc != null) {
+                doc = Json.stringify(jsonDoc)
+                // Verify that doc is not empty and is not deleted
+                val deleted = (jsonDoc \ "_deleted").getOrElse(null)
+                if (!doc.isEmpty && deleted == null) {
+                  store(doc)
+                  count += 1
+                }
               }
             }
-          } else if (count >= limit) {
+          } else {
             // exit loop once limit is reached
             return
           }
