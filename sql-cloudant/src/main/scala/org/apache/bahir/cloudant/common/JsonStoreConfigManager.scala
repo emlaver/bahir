@@ -35,11 +35,11 @@ object JsonStoreConfigManager {
   private val CLOUDANT_PASSWORD_CONFIG = "cloudant.password"
   private val CLOUDANT_PROTOCOL_CONFIG = "cloudant.protocol"
   private val CLOUDANT_API_ENDPOINT = "cloudant.endpoint"
+  private val STORAGE_LEVEL_FOR_CHANGES_INDEX = "cloudant.storageLevel"
   private val CLOUDANT_CHANGES_TIMEOUT = "cloudant.timeout"
   private val USE_QUERY_CONFIG = "cloudant.useQuery"
   private val QUERY_LIMIT_CONFIG = "cloudant.queryLimit"
   private val FILTER_SELECTOR = "selector"
-  private val STORAGE_LEVEL_FOR_CHANGES_INDEX = "storageLevel"
 
   private val PARTITION_CONFIG = "jsonstore.rdd.partitions"
   private val MAX_IN_PARTITION_CONFIG = "jsonstore.rdd.maxInPartition"
@@ -149,12 +149,8 @@ object JsonStoreConfigManager {
 
   private def getStorageLevel(sparkConf: SparkConf, parameters: Map[String, String],
                         key: String) : StorageLevel = {
-    val storageValue = parameters.getOrElse(key, null)
-    if(storageValue != null && !storageValue.isEmpty) {
-      StorageLevel.fromString(storageValue)
-    } else {
-      null
-    }
+    val storageValue = getString(sparkConf, parameters, key)
+    StorageLevel.fromString(storageValue)
   }
 
   def getConfig(context: SQLContext, parameters: Map[String, String]): CloudantConfig = {

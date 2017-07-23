@@ -64,6 +64,7 @@ cloudant.username| |cloudant userid
 cloudant.password| |cloudant password
 cloudant.useQuery|false|by default, `_all_docs` endpoint is used if configuration 'view' and 'index' (see below) are not set. When useQuery is enabled, `_find` endpoint will be used in place of `_all_docs` when query condition is not on primary key field (_id), so that query predicates may be driven into datastore. 
 cloudant.queryLimit|25|the maximum number of results returned when querying the `_find` endpoint.
+cloudant.storageLevel|MEMORY_ONLY|the storage level for persisting Spark RDDs during load when `cloudant.endpoint` is set to `_changes`.  See [RDD Persistence section](https://spark.apache.org/docs/latest/programming-guide.html#rdd-persistence) in Spark's Progamming Guide for all available storage level options.
 cloudant.timeout|60000|stop the response after waiting the defined number of milliseconds for data.  Only supported with `changes` endpoint.
 jsonstore.rdd.partitions|10|the number of partitions intent used to drive JsonStoreRDD loading query result in parallel. The actual number is calculated based on total rows returned and satisfying maxInPartition and minInPartition. Only supported with `_all_docs` endpoint.
 jsonstore.rdd.maxInPartition|-1|the max rows in a partition. -1 means unlimited
@@ -92,7 +93,6 @@ When using `_all_docs` API:
 
 If loading Cloudant docs from a database greater than 100 MB, set `cloudant.endpoint` to `_changes` and `spark.streaming.unpersist` to `false`.
 This will enable RDD persistence during load against `_changes` endpoint and allow the persisted RDDs to be accessible after streaming completes.  
-See the [Spark Programming Guide](https://spark.apache.org/docs/latest/programming-guide.html#rdd-persistence) for more details on persistence and valid storage level options to use with `storageLevel` option.
  
 See [CloudantChangesDFSuite](src/test/scala/org/apache/bahir/cloudant/CloudantChangesDFSuite.scala) 
 for examples of loading data into a Spark DataFrame with `_changes` API.
@@ -110,7 +110,6 @@ index| | Cloudant Search index without the database name. Search index queries a
 path| | Cloudant: as database name if database is not present
 schemaSampleSize|-1| the sample size used to discover the schema for this temp table. -1 scans all documents
 selector|all documents| a selector written in Cloudant Query syntax, specifying conditions for selecting documents when the `cloudant.endpoint` option is set to `_changes`. Only documents satisfying the selector's conditions will be retrieved from Cloudant and loaded into Spark.
-storageLevel|MEMORY_ONLY| the storage level for persisting Spark RDDs during load when `cloudant.endpoint` is set to `_changes`.  See [RDD Persistence section](https://spark.apache.org/docs/latest/programming-guide.html#rdd-persistence) in Spark's Progamming Guide for all available storage level options.
 view| | Cloudant view w/o the database name. only used for load.
 
 For fast loading, views are loaded without include_docs. Thus, a derived schema will always be: `{id, key, value}`, where `value `can be a compount field. An example of loading data from a view: 
