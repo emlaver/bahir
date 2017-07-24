@@ -17,6 +17,7 @@
 package org.apache.bahir.cloudant.common
 
 import com.typesafe.config.ConfigFactory
+import org.slf4j.{Logger, LoggerFactory}
 
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.SparkConf
@@ -53,6 +54,8 @@ object JsonStoreConfigManager {
 
   private val ROOT_CONFIG_NAME = "spark-sql"
   private val rootConfig = configFactory.getConfig(ROOT_CONFIG_NAME)
+
+  implicit lazy val logger: Logger = LoggerFactory.getLogger(getClass)
 
 
     /**
@@ -150,6 +153,9 @@ object JsonStoreConfigManager {
   private def getStorageLevel(sparkConf: SparkConf, parameters: Map[String, String],
                         key: String) : StorageLevel = {
     val storageValue = getString(sparkConf, parameters, key)
+    logger.info("** Storage level for streaming data from Cloudant to Spark RDDs: "
+      + storageValue + " ** And StorageLevel settings: "
+      + StorageLevel.fromString(storageValue).toString)
     StorageLevel.fromString(storageValue)
   }
 

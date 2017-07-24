@@ -98,7 +98,10 @@ class DefaultSource extends RelationProvider
                        parameters: Map[String, String],
                        inSchema: StructType) = {
 
-      val config: CloudantConfig = JsonStoreConfigManager.getConfig(sqlContext, parameters)
+      val config: CloudantConfig = {
+        JsonStoreConfigManager.getConfig(sqlContext, parameters
+          + ("spark.streaming.unpersist" -> "false"))
+      }
 
       var dataFrame: DataFrame = null
 
@@ -131,6 +134,9 @@ class DefaultSource extends RelationProvider
           val changes = ssc.receiverStream(
             new ChangesReceiver(changesConfig))
           changes.persist(changesConfig.getStorageLevelForStreaming)
+
+          logger.info("Storage level for streaming data from Cloudant to Spark RDDs: "
+            + changesConfig.getStorageLevelForStreaming.toString)
 
           // Global RDD that's created from union of all RDDs
           var globalRDD = ssc.sparkContext.emptyRDD[String]
