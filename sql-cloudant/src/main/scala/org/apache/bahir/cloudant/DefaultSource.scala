@@ -141,10 +141,9 @@ class DefaultSource extends RelationProvider
         val changesConfig = config.asInstanceOf[CloudantChangesConfig]
 
         // Persist RDDs after streaming context is complete to create DataFrame
-        sqlContext.sparkContext.getConf.set("spark.streaming.unpersist", "false")
+        // sqlContext.sparkContext.getConf.set("spark.streaming.unpersist", "false")
 
-        val ssc = new StreamingContext(sqlContext.sparkContext,
-          Seconds(changesConfig.getBatchInterval))
+        val ssc = new StreamingContext(sqlContext.sparkContext, Seconds(5))
 
         val changes = ssc.receiverStream(
           new ChangesReceiver(changesConfig))
@@ -160,12 +159,9 @@ class DefaultSource extends RelationProvider
           + changesConfig.getChangesReceiverUrl)
 
 
-        // TODO remove after debugging
-        var rddCount = 0
         // Collect and union each RDD to convert all RDDs to a DataFrame
         changes.foreachRDD((rdd: RDD[String]) => {
           if (!rdd.isEmpty()) {
-            rddCount += 1
             if (globalRDD != null) {
               // Union RDDs in foreach loop
               globalRDD = globalRDD.union(rdd)
@@ -182,9 +178,6 @@ class DefaultSource extends RelationProvider
         ssc.start
         // run streaming until all docs from continuous feed are received
         ssc.awaitTermination
-
-        logger.info("Total RDD count: " + rddCount)
-
         dataFrame.schema
       }
     }

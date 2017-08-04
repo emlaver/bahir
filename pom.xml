@@ -316,6 +316,12 @@
         <version>2.3.0</version>
       </dependency>
 
+      <dependency>
+        <groupId>com.cloudant</groupId>
+        <artifactId>cloudant-client</artifactId>
+        <version>2.9.0</version>
+      </dependency>
+
       <!-- Scala Related Dependencies -->
       <dependency>
         <groupId>org.scala-lang</groupId>

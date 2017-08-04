@@ -16,35 +16,21 @@
  */
 package org.apache.bahir.cloudant.internal
 
-import scala.collection.mutable.ArrayBuffer
+import java.util.concurrent.BlockingQueue
 
+import com.google.gson.JsonObject
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.libs.json.Json
-import scalaj.http._
-
-import org.apache.spark.SparkConf
-import org.apache.spark.storage.StorageLevel
-import org.apache.spark.streaming.receiver.Receiver
 
 import org.apache.bahir.cloudant.CloudantChangesConfig
-import org.apache.bahir.cloudant.common._
 
-
-class ChangesReceiver(config: CloudantChangesConfig)
-  extends Receiver[String](StorageLevel.MEMORY_AND_DISK) {
-
+class LoadChanges(config: CloudantChangesConfig, queue: BlockingQueue[JsonObject])
+  extends Runnable {
   lazy val logger: Logger = LoggerFactory.getLogger(getClass)
   // Get total number of docs in database using _all_docs endpoint
   lazy val limit: Int = config.getTotal()
 
-  def onStart() {
-    // Start the thread that receives data over a connection
-    new Thread("Cloudant Receiver") {
-      override def run() { receive() }
-    }.start()
-  }
-
-  private def receive(): Unit = {
+  // Testing with no streaming and using blocking queue
+  private def loadAll(): Unit = {
     // Get continuous _changes url
     // val url = config.getChangesReceiverUrl.toString
     val selector: String = {
@@ -66,7 +52,7 @@ class ChangesReceiver(config: CloudantChangesConfig)
         val doc = feed.getDoc
         // Verify that doc is not empty and is not deleted
         if(!doc.has("_deleted")) {
-          store(doc.toString)
+          queue.add(doc)
           // list += doc.toString
           count += 1
         }
@@ -82,6 +68,7 @@ class ChangesReceiver(config: CloudantChangesConfig)
     changes.stop()
   }
 
-  override def onStop(): Unit = {
+  override def run(): Unit = {
+    loadAll()
   }
 }
