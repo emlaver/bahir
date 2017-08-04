@@ -16,6 +16,7 @@
  */
 package org.apache.bahir.cloudant.common
 
+import com.google.gson.JsonObject
 import org.slf4j.LoggerFactory
 import play.api.libs.json.{JsObject, JsString, JsValue}
 
@@ -142,6 +143,22 @@ object FilterDDocs {
       JsonUtil.getField(row, "_id").orNull.as[JsString].value
     } else if (row.as[JsObject].keys.contains("id")) {
       JsonUtil.getField(row, "id").orNull.as[JsString].value
+    } else {
+      null
+    }
+    if (id != null && id.startsWith("_design")) {
+      false
+    } else {
+      true
+    }
+  }
+}
+
+object FilterDocumentDDocs {
+  def filter(row: JsonObject): Boolean = {
+    if (row == null) return true
+    val id : String = if (row.has("_id")) {
+      row.get("_id").getAsString
     } else {
       null
     }

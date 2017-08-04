@@ -34,6 +34,8 @@ object JsonStoreConfigManager {
   private val CLOUDANT_USERNAME_CONFIG = "cloudant.username"
   private val CLOUDANT_PASSWORD_CONFIG = "cloudant.password"
   private val CLOUDANT_PROTOCOL_CONFIG = "cloudant.protocol"
+  private val CLOUDANT_STREAMING_BATCH_INTERVAL = "cloudant.batchInterval"
+  private val CLOUDANT_STREAMING_STORE_INTERVAL = "cloudant.storeInterval"
   private val CLOUDANT_API_ENDPOINT = "cloudant.endpoint"
   private val STORAGE_LEVEL_FOR_CHANGES_INDEX = "cloudant.storageLevel"
   private val CLOUDANT_CHANGES_TIMEOUT = "cloudant.timeout"
@@ -173,6 +175,8 @@ object JsonStoreConfigManager {
     implicit val storageLevel = getStorageLevel(
       sparkConf, parameters, STORAGE_LEVEL_FOR_CHANGES_INDEX)
     implicit val timeout = getInt(sparkConf, parameters, CLOUDANT_CHANGES_TIMEOUT)
+    implicit val batchInterval = getInt(sparkConf, parameters, CLOUDANT_STREAMING_BATCH_INTERVAL)
+    implicit val storeInterval = getInt(sparkConf, parameters, CLOUDANT_STREAMING_STORE_INTERVAL)
 
     implicit val useQuery = getBool(sparkConf, parameters, USE_QUERY_CONFIG)
     implicit val queryLimit = getInt(sparkConf, parameters, QUERY_LIMIT_CONFIG)
@@ -197,7 +201,7 @@ object JsonStoreConfigManager {
       new CloudantChangesConfig(protocol, host, dbName, indexName,
         viewName) (user, passwd, total, max, min, requestTimeout,
         bulkSize, schemaSampleSize, createDBOnSave, endpoint, selector,
-        timeout, storageLevel, useQuery, queryLimit)
+        timeout, storageLevel, batchInterval, storeInterval, useQuery, queryLimit)
     } else {
       throw new CloudantException(s"spark.$CLOUDANT_API_ENDPOINT parameter " +
         s"is invalid. Please supply the valid option '" + ALL_DOCS_INDEX + "' or '" +

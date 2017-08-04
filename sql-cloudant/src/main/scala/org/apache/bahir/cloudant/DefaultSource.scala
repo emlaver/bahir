@@ -39,12 +39,20 @@ case class CloudantReadWriteRelation (config: CloudantConfig,
 
     def buildScan(requiredColumns: Array[String],
                 filters: Array[Filter]): RDD[Row] = {
+      val startTime = System.currentTimeMillis
+
       val colsLength = requiredColumns.length
 
       if (dataFrame != null) {
         if (colsLength == 0) {
+          logger.info("Time for Cloudant docs response: "
+            + ((System.currentTimeMillis() - startTime) / 1000)
+            + " secs")
           dataFrame.select().rdd
         } else if (colsLength == 1) {
+          logger.info("Time for Cloudant docs response: "
+            + ((System.currentTimeMillis() - startTime) / 1000)
+            + " secs")
           dataFrame.select(requiredColumns(0)).rdd
         } else {
           val colsExceptCol0 = for (i <- 1 until colsLength) yield requiredColumns(i)
@@ -105,29 +113,34 @@ class DefaultSource extends RelationProvider
       val schema: StructType = {
         if (inSchema != null) {
           inSchema
-        } else if (!config.isInstanceOf[CloudantChangesConfig]
-          || config.viewName != null || config.indexName != null) {
-          val df = if (config.getSchemaSampleSize ==
-            JsonStoreConfigManager.ALLDOCS_OR_CHANGES_LIMIT &&
-            config.viewName == null
-            && config.indexName == null) {
-            val cloudantRDD = new JsonStoreRDD(sqlContext.sparkContext, config)
-            dataFrame = sqlContext.read.json(cloudantRDD)
-            dataFrame
-          } else {
-            val dataAccess = new JsonStoreDataAccess(config)
-            val aRDD = sqlContext.sparkContext.parallelize(
+        } else if (config.endpoint == JsonStoreConfigManager.ALL_DOCS_INDEX) {
+          val df = {
+            if (config.getSchemaSampleSize ==
+              JsonStoreConfigManager.ALLDOCS_OR_CHANGES_LIMIT &&
+              config.viewPath == null
+              && config.indexPath == null) {
+              val cloudantRDD = new JsonStoreRDD(sqlContext.sparkContext, config)
+              if(!sqlContext.sparkContext.isStopped) {
+                dataFrame = sqlContext.read.json(cloudantRDD)
+              }
+              dataFrame
+            } else {
+              val dataAccess = new JsonStoreDataAccess(config)
+              val aRDD = sqlContext.sparkContext.parallelize(
                 dataAccess.getMany(config.getSchemaSampleSize))
-            sqlContext.read.json(aRDD)
+              sqlContext.read.json(aRDD)
+            }
           }
           df.schema
         } else {
           /* Create a streaming context to handle transforming docs in
           * larger databases into Spark datasets
           */
-          val ssc = new StreamingContext(sqlContext.sparkContext, Seconds(10))
-
           val changesConfig = config.asInstanceOf[CloudantChangesConfig]
+
+          val ssc = new StreamingContext(sqlContext.sparkContext,
+            Seconds(changesConfig.getBatchInterval))
+
           val changes = ssc.receiverStream(
             new ChangesReceiver(changesConfig))
           changes.persist(changesConfig.getStorageLevelForStreaming)
@@ -138,9 +151,13 @@ class DefaultSource extends RelationProvider
           logger.info("Loading data from Cloudant using "
             + changesConfig.getChangesReceiverUrl)
 
+
+          // TODO remove after debugging
+          var rddCount = 0
           // Collect and union each RDD to convert all RDDs to a DataFrame
           changes.foreachRDD((rdd: RDD[String]) => {
             if (!rdd.isEmpty()) {
+              rddCount += 1
               if (globalRDD != null) {
                 // Union RDDs in foreach loop
                 globalRDD = globalRDD.union(rdd)
@@ -157,6 +174,8 @@ class DefaultSource extends RelationProvider
           ssc.start
           // run streaming until all docs from continuous feed are received
           ssc.awaitTermination
+
+          logger.info("Total RDD count: " + rddCount)
 
           dataFrame.schema
         }

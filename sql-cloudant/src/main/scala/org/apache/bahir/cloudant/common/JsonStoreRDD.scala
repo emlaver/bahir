@@ -188,11 +188,12 @@ class JsonStoreRDD(sc: SparkContext, config: CloudantConfig)
 
    logger.info(s"Partition query info - url=$url, queryUsed=$queryUsed")
 
-   (0 until totalPartition).map(i => {
+   val partitionArray = (0 until totalPartition).map(i => {
       val skip = i * limitPerPartition
       new JsonStoreRDDPartition(url, skip, limitPerPartition, i,
           config, selector, fields, queryUsed).asInstanceOf[Partition]
     }).toArray
+    partitionArray
   }
 
   override def compute(splitIn: Partition, context: TaskContext):

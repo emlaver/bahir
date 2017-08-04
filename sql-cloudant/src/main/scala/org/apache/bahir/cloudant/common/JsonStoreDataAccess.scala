@@ -24,6 +24,7 @@ import scala.concurrent.duration._
 import scala.language.implicitConversions
 import scala.util.{Failure, Success}
 
+import com.google.gson.{GsonBuilder, JsonElement, JsonObject}
 import scalaj.http.{Http, HttpRequest, HttpResponse}
 import ExecutionContext.Implicits.global
 import org.slf4j.{Logger, LoggerFactory}
@@ -31,10 +32,10 @@ import play.api.libs.json._
 
 import org.apache.bahir.cloudant.CloudantConfig
 
-
 class JsonStoreDataAccess (config: CloudantConfig)  {
   lazy val logger: Logger = LoggerFactory.getLogger(getClass)
   implicit lazy val timeout: Long = config.requestTimeout
+  private val gson = new GsonBuilder().create()
 
   def getMany(limit: Int)(implicit columns: Array[String] = null): Seq[String] = {
     if (limit == 0) {
@@ -45,38 +46,52 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
       throw new CloudantException("Database " + config.getDbname +
         " schema sample size is " + limit + "!")
     }
-    var r = this.getQueryResult[Seq[String]](config.getUrl(limit), processAll)
+    // var r = this.getQueryResult[Seq[String]](config.getUrl(limit), processAll)
+    var r = config.getUrl(limit)
     if (r.isEmpty) {
-      r = this.getQueryResult[Seq[String]](config.getUrl(limit, excludeDDoc = true),
-        processAll)
+      // r = this.getQueryResult[Seq[String]](config.getUrl(limit, excludeDDoc = true),
+      //  processAll)
+      r = config.getUrl(limit, excludeDDoc = true)
     }
     if (r.isEmpty) {
       throw new CloudantException("Database " + config.getDbname +
         " doesn't have any non-design documents!")
     } else {
-      r
+      // post-processing using previous processAll logic
+      r.map(r => convert(r))
     }
-  }
-
-  def getAll[T](url: String)
-      (implicit columns: Array[String] = null): Seq[String] = {
-    this.getQueryResult[Seq[String]](url, processAll)
   }
 
   def getIterator(skip: Int, limit: Int, url: String)
       (implicit columns: Array[String] = null,
       postData: String = null): Iterator[String] = {
-    val newUrl = config.getSubSetUrl(url, skip, limit, postData != null)
-    this.getQueryResult[Iterator[String]](newUrl, processIterator)
+    logger.info(s"Loading data from Cloudant using: $url , postData: $postData")
+
+    val startTime = System.currentTimeMillis
+
+    var rows = config.getSubSetUrl(url, skip, limit, postData != null)
+
+    val finishTime = System.currentTimeMillis
+
+    logger.info("Time for Cloudant _all_docs response: " + ((finishTime - startTime) / 1000))
+    // this.getQueryResult[Iterator[String]](newUrl, processIterator)
+    // rows.map(j => Json.parse(j.getAsString))
+    if (config.viewPath == null && postData == null) {
+      // filter design docs
+      rows = rows.filter(r => FilterDocumentDDocs.filter(r))
+    }
+    val finish1Time = System.currentTimeMillis
+
+    logger.info("Time for filter: " + ((finish1Time - finishTime) / 1000))
+
+    rows.map(r => convertToString(r)).iterator
   }
 
   def getTotalRows(url: String, queryUsed: Boolean)
       (implicit postData: String = null): Int = {
       if (queryUsed) config.queryLimit // Query can not retrieve total row now.
       else {
-        val totalUrl = config.getTotalUrl(url)
-        this.getQueryResult[Int](totalUrl,
-          { result => config.getTotalRows(Json.parse(result))})
+        config.getTotal(url)
       }
   }
 
@@ -111,42 +126,26 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
     result
   }
 
-
-  def getChanges(url: String, processResults: (String) => String): String = {
-    getQueryResult(url, processResults)
-  }
-
-  private def getQueryResult[T]
-      (url: String, postProcessor: (String) => T)
-      (implicit columns: Array[String] = null,
-      postData: String = null) : T = {
-    logger.info(s"Loading data from Cloudant using: $url , postData: $postData")
-
-    val clRequest: HttpRequest = getClRequest(url, postData)
-
-    val clResponse: HttpResponse[String] = clRequest.execute()
-    if (! clResponse.isSuccess) {
-      throw new CloudantException("Database " + config.getDbname +
-        " request error: " + clResponse.body)
+  private def convertToString(rec: JsonObject)(implicit columns: Array[String]): String = {
+    val startConvertTime = System.currentTimeMillis
+    if (columns == null) return gson.toJson(rec)
+    val m = new mutable.HashMap[String, JsonElement]()
+    for ( x <- columns) {
+      val field = rec.get(x)
+      m.put(x, field)
     }
-    val data = postProcessor(clResponse.body)
-    logger.debug(s"got result:$data")
-    data
+    // val result = Json.stringify(Json.toJson(m.toMap))
+    val result = gson.toJson(m.toMap)
+    // logger.debug(s"converted: $result")
+    val finishConvertTime = System.currentTimeMillis
+    logger.info("Time for convert: " + ((finishConvertTime - startConvertTime) / 1000))
+    println("Time for convert: " + ((finishConvertTime - startConvertTime) / 1000)) // scalastyle:ignore
+    result
   }
 
   def createDB(): Unit = {
-    val url = config.getDbUrl.toString
-    val clRequest: HttpRequest = getClRequest(url, null, "PUT")
-
-    val clResponse: HttpResponse[String] = clRequest.execute()
-    if (! clResponse.isSuccess) {
-      throw new CloudantException("Database " + config.getDbname +
-        " create error: " + clResponse.body)
-    } else {
-      logger.warn(s"Database ${config.getDbname} was created.")
-    }
+    config.getClient.createDB(config.getDbname)
   }
-
 
   def getClRequest(url: String, postData: String = null,
                    httpMethod: String = null): HttpRequest = {
