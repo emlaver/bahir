@@ -455,7 +455,7 @@
             <excludes>
               <exclude>.gitignore</exclude>
               <exclude>.repository/</exclude>
-              <exclude>.idea/</exclude>
+              <exclude>**/.idea/**</exclude>
               <exclude>.git</exclude>
               <exclude>.settings</exclude>
               <exclude>.classpath</exclude>
