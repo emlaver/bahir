@@ -125,7 +125,7 @@ class DefaultSource extends RelationProvider
         /* Create a streaming context to handle transforming docs in
         * larger databases into Spark datasets
         */
-        val ssc = new StreamingContext(sqlContext.sparkContext, Seconds(15))
+        val ssc = new StreamingContext(sqlContext.sparkContext, Seconds(5))
 
         val changesConfig = config.asInstanceOf[CloudantChangesConfig]
         val changes = ssc.receiverStream(
