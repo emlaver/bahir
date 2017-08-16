@@ -143,7 +143,7 @@ class DefaultSource extends RelationProvider
         // Persist RDDs after streaming context is complete to create DataFrame
         // sqlContext.sparkContext.getConf.set("spark.streaming.unpersist", "false")
 
-        val ssc = new StreamingContext(sqlContext.sparkContext, Seconds(5))
+        val ssc = new StreamingContext(sqlContext.sparkContext, Seconds(10))
 
         val changes = ssc.receiverStream(
           new ChangesReceiver(changesConfig))
