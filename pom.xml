@@ -142,6 +142,10 @@
 
   <repositories>
     <repository>
+      <id>local-repo</id>
+      <url>file://${project.basedir}/sql-cloudant/lib/</url>
+    </repository>
+    <repository>
       <id>central</id>
       <!-- This should be at top, it makes maven try the central repo first and then others and hence faster dep resolution -->
       <name>Maven Repository</name>
