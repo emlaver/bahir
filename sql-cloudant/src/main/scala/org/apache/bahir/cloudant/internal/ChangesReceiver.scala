@@ -59,6 +59,7 @@ class ChangesReceiver(config: CloudantChangesConfig)
           .header("User-Agent", "spark-cloudant")
       case _ =>
         Http(url)
+          .param("seq_interval", "10000")
           .postData(selector)
           .timeout(connTimeoutMs = 1000, readTimeoutMs = 0)
           .header("Content-Type", "application/json")
