@@ -40,17 +40,18 @@ object CloudantStreaming {
     changes.foreachRDD((rdd: RDD[String], time: Time) => {
       // Get the singleton instance of SparkSession
       val spark = SparkSessionSingleton.getInstance(rdd.sparkContext.getConf)
+      import spark.implicits._
 
       println(s"========= $time =========")// scalastyle:ignore
-      // Convert RDD[String] to DataFrame
-      val changesDataFrame = spark.read.json(rdd)
-      if (!changesDataFrame.schema.isEmpty) {
-        changesDataFrame.printSchema()
-        changesDataFrame.select("*").show()
+      // Convert RDD[String] to Dataset[String]
+      val changesDataset = rdd.toDS()
+      if (changesDataset.schema.nonEmpty) {
+        changesDataset.printSchema()
+        changesDataset.select("*").show()
 
         var hasDelRecord = false
         var hasAirportNameField = false
-        for (field <- changesDataFrame.schema.fieldNames) {
+        for (field <- changesDataset.schema.fieldNames) {
           if ("_deleted".equals(field)) {
             hasDelRecord = true
           }
@@ -59,12 +60,12 @@ object CloudantStreaming {
           }
         }
         if (hasDelRecord) {
-          changesDataFrame.filter(changesDataFrame("_deleted")).select("*").show()
+          changesDataset.filter(changesDataset("_deleted")).select("*").show()
         }
 
         if (hasAirportNameField) {
-          changesDataFrame.filter(changesDataFrame("airportName") >= "Paris").select("*").show()
-          changesDataFrame.registerTempTable("airportcodemapping")
+          changesDataset.filter(changesDataset("airportName") >= "Paris").select("*").show()
+          changesDataset.createOrReplaceTempView("airportcodemapping")
           val airportCountsDataFrame =
             spark.sql(
                 s"""
