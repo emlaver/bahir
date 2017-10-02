@@ -29,7 +29,7 @@ import org.apache.bahir.cloudant.internal.ChangesReceiver
 
 case class CloudantReadWriteRelation (config: CloudantConfig,
                                       schema: StructType,
-                                      dataFrame: Dataset[String] = null)
+                                      dataFrame: DataFrame = null)
                       (@transient val sqlContext: SQLContext)
   extends BaseRelation with PrunedFilteredScan  with InsertableRelation {
 
@@ -104,28 +104,29 @@ class DefaultSource extends RelationProvider
 
       val config: CloudantConfig = JsonStoreConfigManager.getConfig(sqlContext, parameters)
 
-      // var dataFrame: DataFrame = null
+      var dataFrame: DataFrame = null
 
-      var dataset: Dataset[String] = null
+      // var dataset: Dataset[String] = null
 
       val schema: StructType = {
         if (inSchema != null) {
           inSchema
         } else if (!config.isInstanceOf[CloudantChangesConfig]
           || config.viewName != null || config.indexName != null) {
-          val dataset = if (config.getSchemaSampleSize ==
+          val df = if (config.getSchemaSampleSize ==
             JsonStoreConfigManager.ALLDOCS_OR_CHANGES_LIMIT &&
             config.viewName == null
             && config.indexName == null) {
             val cloudantRDD = new JsonStoreRDD(sqlContext.sparkContext, config)
-            cloudantRDD.toDS()
+            dataFrame = cloudantRDD.toDF()
+            dataFrame
           } else {
             val dataAccess = new JsonStoreDataAccess(config)
             val aRDD = sqlContext.sparkContext.parallelize(
                 dataAccess.getMany(config.getSchemaSampleSize))
-            aRDD.toDS()
+            aRDD.toDF()
           }
-          dataset.schema
+          df.schema
         } else {
           /* Create a streaming context to handle transforming docs in
           * larger databases into Spark datasets
@@ -149,10 +150,10 @@ class DefaultSource extends RelationProvider
           changes.foreachRDD((rdd: RDD[String]) => {
 
             if (!rdd.isEmpty()) {
-              if (dataset != null) {
-                dataset = dataset.union(rdd.toDS())
+              if (dataFrame != null) {
+                dataFrame = dataFrame.union(rdd.toDF())
               } else {
-                dataset = rdd.toDS()
+                dataFrame = rdd.toDF()
               }
             } else {
               ssc.stop(stopSparkContext = false, stopGracefully = false)
@@ -163,11 +164,10 @@ class DefaultSource extends RelationProvider
           // run streaming until all docs from continuous feed are received
           ssc.awaitTermination
 
-          // dataFrame.schema
-          dataset.schema
+          dataFrame.schema
         }
       }
-      CloudantReadWriteRelation(config, schema, dataset)(sqlContext)
+      CloudantReadWriteRelation(config, schema, dataFrame)(sqlContext)
     }
 
     def createRelation(sqlContext: SQLContext,
