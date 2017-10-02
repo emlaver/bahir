@@ -127,7 +127,7 @@ class DefaultSource extends RelationProvider
           */
           val changesConfig = config.asInstanceOf[CloudantChangesConfig]
           val ssc = new StreamingContext(sqlContext.sparkContext,
-            Seconds(changesConfig.getBatchSeconds))
+            Seconds(changesConfig.getBatchInterval))
 
           val changes = ssc.receiverStream(
             new ChangesReceiver(changesConfig))
