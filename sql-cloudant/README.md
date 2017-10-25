@@ -39,6 +39,29 @@ Submit a job in Scala:
 
 This library is compiled for Scala 2.11 only, and intends to support Spark 2.0 onwards.
 
+### Implementation of RelationProvider
+[DefaultSource](src/main/scala/org/apache/bahir/cloudant/DefaultSource.scala) is a RelationProvider for loading data from Cloudant to Spark, and saving it back from Cloudant to Spark. It has the following functionalities:
+
+Functionality | Value 
+--- | --- 
+Table Option | database or path, search index, view 
+Scan Type | PrunedFilteredScan | 
+Column Pruning | yes 
+Predicates Push Down | _id or first predicate 
+Parallel Loading | yes, except with search index 
+Insertable | yes
+
+### Implementation of Receiver
+Spark Cloudant connector creates a discretized stream in Spark (Spark input DStream) out of Cloudant data sources. 
+CloudantReceiver.scala is a custom Receiver that converts _changes feed from a Cloudant database to DStream in Spark. 
+This allows all sorts of processing on this streamed data including using DataFrames and SQL operations on it.
+
+**Note**: Since CloudantReceiver for Spark Streaming is based on `_changes` API, there are some limitations that 
+application developers should be aware of. Firstly, results returned from `_changes` are partially ordered, and may not 
+be presented in order in which documents were updated. Secondly, in case of shards' unavailability, you may see 
+duplicates, changes that have been seen already. Thus, it is up to applications using Spark Streaming with 
+CloudantReceiver to keep track of `_changes` they have processed and detect duplicates.
+
 ## Configuration options	
 The configuration is obtained in the following sequence:
 
