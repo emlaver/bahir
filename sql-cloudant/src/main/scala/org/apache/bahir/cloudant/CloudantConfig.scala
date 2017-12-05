@@ -19,12 +19,12 @@ package org.apache.bahir.cloudant
 import java.net.{URL, URLEncoder}
 import java.nio.file.Paths
 
-import scala.collection.JavaConversions._ // scalastyle:ignore
+import scala.collection.JavaConversions._
 
 import com.cloudant.client.api.{ClientBuilder, CloudantClient, Database}
 import com.cloudant.client.api.model.SearchResult
 import com.cloudant.client.api.views._
-import com.cloudant.http.Http
+import com.cloudant.http.{Http, HttpConnection}
 import com.google.gson.JsonObject
 import play.api.libs.json.{JsArray, JsObject, Json, JsValue}
 
@@ -45,7 +45,7 @@ class CloudantConfig(val protocol: String, val host: String,
   extends Serializable {
 
   @transient private lazy val client: CloudantClient = ClientBuilder
-    .url(new URL(protocol + "://" + host))
+    .url(getClientUrl)
     .username(username)
     .password(password)
     .build
@@ -86,6 +86,16 @@ class CloudantConfig(val protocol: String, val host: String,
     searchReq.querySearchResult(default_filter, classOf[String])
   }
 
+  def executeRequest(postData: String): HttpConnection = {
+    val conn = Http.POST(getClientUrl, "application/json")
+    conn.requestProperties.put("Accept", "application/json")
+    conn.requestProperties.put("User-Agent", "spark-cloudant")
+    if(postData != null) {
+      conn.setRequestBody(postData)
+    }
+    client.executeRequest(conn)
+  }
+
   def getClient: CloudantClient = {
     client
   }
@@ -100,6 +110,10 @@ class CloudantConfig(val protocol: String, val host: String,
 
   def getCreateDBonSave: Boolean = {
     createDBOnSave
+  }
+
+  def getClientUrl: URL = {
+    new URL(protocol + "://" + host)
   }
 
   def getLastNum(result: JsValue): JsValue = (result \ "last_seq").get
@@ -184,36 +198,45 @@ class CloudantConfig(val protocol: String, val host: String,
     }
   }
 
-  /*
-  * Url for paging using skip and limit options when loading docs with partitions.
-  */
-  def getSubSetUrl[T](url: String, skip: Int, limit: Int, queryUsed: Boolean):
-  Seq[JsonObject] = {
-    if (url.indexOf(JsonStoreConfigManager.ALL_DOCS_INDEX) > 0) {
-      // "include_docs=true&limit=" + limit + "&skip=" + skip
-      buildAllDocsRequest(limit).skip(skip).build()
-        .getResponse.getDocsAs(classOf[JsonObject]).toList
-      // docs.removeIf(d => d.asInstanceOf[Map].get("_id").toString.startsWith("_design"))
-    } else if (viewName != null) {
-      // "limit=" + limit + "&skip=" + skip
-      buildViewRequest(limit).skip(skip).build().getResponse
-        .getDocs.toList
-      // TODO
-      null
-    } else if (queryUsed) {
-      // val find = database.findAny(classOf[String], url)
-      null
-    } else {
-      // "include_docs=true&limit=" + limit
-      var searchList = List[AllDocsDocument]()
-      val rows = buildSearchRequest(limit).getRows
-      for(row: SearchResult[String]#SearchResultRow <- rows) {
-        // val test = Json.fromJson[AllDocsDocument](row.getDoc.toString)
-        // searchList += Json.fromJson[AllDocsDocument](row.getDoc.toString)
-        rows.remove(row)
-      }
-      // TODO
-      null
+  def getDocs(skip: Int, limit: Int): Seq[JsonObject] = {
+    buildAllDocsRequest(limit).skip(skip).build()
+      .getResponse.getDocsAs(classOf[JsonObject]).toList
+  }
+
+  def getDocsFromView(skip: Int, limit: Int): Seq[JsonObject] = {
+    buildViewRequest(limit).skip(skip).build().getResponse
+      .getDocsAs(classOf[JsonObject]).toList
+  }
+
+  def getRowsFromSearch(limit: Int): Seq[JsonObject] = {
+    val list = Seq()
+    val rows = buildSearchRequest(limit).getRows
+    for(row: SearchResult[JsonObject]#SearchResultRow <- rows) {
+      list.add(row.getDoc)
+    }
+    list
+  }
+
+
+  def getSubSetUrl(url: String, skip: Int, limit: Int, queryUsed: Boolean): String = {
+    val suffix = {
+      if (url.indexOf(JsonStoreConfigManager.ALL_DOCS_INDEX) > 0) {
+        "include_docs=true&limit=" + limit + "&skip=" + skip
+      } else if (viewName != null) {
+        "limit=" + limit + "&skip=" + skip
+      } else if (queryUsed) {
+        ""
+      } else {
+        "include_docs=true&limit=" + limit
+      } // TODO Index query does not support subset query. Should disable Partitioned loading?
+    }
+    if (suffix.length == 0) {
+      url
+    } else if (url.indexOf('?') > 0) {
+      url + "&" + suffix
+    }
+    else {
+      url + "?" + suffix
     }
   }
 

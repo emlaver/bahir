@@ -16,13 +16,14 @@
  */
 package org.apache.bahir.cloudant
 
-import play.api.libs.json.Json
-import scalaj.http._
+import java.io.InputStreamReader
 
+import play.api.libs.json.Json
+
+import scalaj.http._
 import org.apache.spark.SparkConf
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.receiver.Receiver
-
 import org.apache.bahir.cloudant.common._
 
 class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String])
@@ -42,48 +43,44 @@ class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String]
   }
 
   private def receive(): Unit = {
+    val client = config.getClient
     val url = config.getContinuousChangesUrl.toString
     val selector: String = if (config.getSelector != null) {
       "{\"selector\":" + config.getSelector + "}"
     } else {
-      "{}"
+      null
     }
 
-    val clRequest: HttpRequest = config.username match {
-      case null =>
-        Http(url)
-          .postData(selector)
-          .timeout(connTimeoutMs = 1000, readTimeoutMs = 0)
-          .header("Content-Type", "application/json")
-          .header("User-Agent", "spark-cloudant")
-      case _ =>
-        Http(url)
-          .postData(selector)
-          .timeout(connTimeoutMs = 1000, readTimeoutMs = 0)
-          .header("Content-Type", "application/json")
-          .header("User-Agent", "spark-cloudant")
-          .auth(config.username, config.password)
-    }
-
-    clRequest.exec((code, headers, is) => {
-      if (code == 200) {
-        scala.io.Source.fromInputStream(is, "utf-8").getLines().foreach(line => {
-          if (line.length() > 0) {
-            val json = Json.parse(line)
-            val jsonDoc = (json \ "doc").getOrElse(null)
-            var doc = ""
-            if(jsonDoc != null) {
-              doc = Json.stringify(jsonDoc)
+    val changesRequest = config.executeRequest(selector)
+    if (changesRequest.getConnection.getResponseCode / 100 == 2 ) {
+      import java.io.BufferedReader
+      val reader = new BufferedReader(
+        new InputStreamReader(changesRequest.responseAsInputStream()))
+      var count = 0
+      var line = ""
+      while ((line = reader.readLine) != null) {
+        if (line.length() > 0) {
+          val json = Json.parse(line)
+          val jsonDoc = (json \ "doc").getOrElse(null)
+          var doc = ""
+          if (jsonDoc != null) {
+            doc = Json.stringify(jsonDoc)
+            // Verify that doc is not empty and is not deleted
+            val deleted = (jsonDoc \ "_deleted").getOrElse(null)
+            if (!doc.isEmpty && deleted == null) {
               store(doc)
+              count += 1
             }
           }
-        })
-      } else {
-        val status = headers.getOrElse("Status", IndexedSeq.empty)
-        val errorMsg = "Error retrieving _changes feed " + config.getDbname + ": " + status(0)
-        reportError(errorMsg, new CloudantException(errorMsg))
+        }
       }
-    })
+    } else {
+      // TODO
+      // val status = headers.getOrElse("Status", IndexedSeq.empty)
+      // val status = changesRequest.responseInterceptors.getOrElse("Status", IndexedSeq.empty)
+      val errorMsg = "Error retrieving _changes feed " + config.getDbname + ": " // + status(0)
+      reportError(errorMsg, new CloudantException(errorMsg))
+    }
   }
 
   def onStop(): Unit = {

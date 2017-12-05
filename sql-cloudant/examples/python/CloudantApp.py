@@ -19,26 +19,20 @@ from pyspark.sql import SparkSession
 spark = SparkSession\
     .builder\
     .appName("Cloudant Spark SQL Example in Python using temp tables")\
-    .config("cloudant.host","ACCOUNT.cloudant.com")\
-    .config("cloudant.username", "USERNAME")\
-    .config("cloudant.password","PASSWORD")\
+    .config("cloudant.host","cloudant.cloudant.com")\
+    .config("cloudant.username", "adm-emlaver")\
+    .config("cloudant.password","J5fvYEgHiHGSSJVjxMF3M1L99") \
+    .config("jsonstore.rdd.partitions", 20)\
     .getOrCreate()
 
+#https://cloudant.cloudant.com/sensu_history_dev/_design/app/_view/by_issued?startkey=[2017,1,1]&endkey=[2017,1,4]
+# ***4. Loading dataframe from a Cloudant view
+df = spark.read.load(format="org.apache.bahir.cloudant", path="sensu_history_dev",
+                     view="_design/app/_view/by_issued", schemaSampleSize="20")
+# schema for view will always be: _id, key, value
+# where value can be a complex field
+df.printSchema()
+#df.show()
 
-# ***1. Loading temp table from Cloudant db
-spark.sql(" CREATE TEMPORARY TABLE airportTable USING org.apache.bahir.cloudant OPTIONS ( database 'n_airportcodemapping')")
-airportData = spark.sql("SELECT _id, airportName FROM airportTable WHERE _id >= 'CAA' AND _id <= 'GAA' ORDER BY _id")
-airportData.printSchema()
-print ('Total # of rows in airportData: ' + str(airportData.count()))
-for code in airportData.collect():
-    print (code._id)
 
-
-# ***2. Loading temp table from Cloudant search index
-print ('About to test org.apache.bahir.cloudant for flight with index')
-spark.sql(" CREATE TEMPORARY TABLE flightTable1 USING org.apache.bahir.cloudant OPTIONS ( database 'n_flight', index '_design/view/_search/n_flights')")
-flightData = spark.sql("SELECT flightSegmentId, scheduledDepartureTime FROM flightTable1 WHERE flightSegmentId >'AA9' AND flightSegmentId<'AA95'")
-flightData.printSchema()
-for code in flightData.collect():
-    print ('Flight {0} on {1}'.format(code.flightSegmentId, code.scheduledDepartureTime))
 
