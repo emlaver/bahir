@@ -24,8 +24,8 @@ import scala.concurrent.duration._
 import scala.language.implicitConversions
 import scala.util.{Failure, Success}
 
-import com.google.gson.{GsonBuilder, JsonElement, JsonObject}
-import scalaj.http.{Http, HttpRequest, HttpResponse}
+import com.cloudant.http.HttpConnection
+import com.google.gson.Gson
 import ExecutionContext.Implicits.global
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json._
@@ -35,7 +35,6 @@ import org.apache.bahir.cloudant.CloudantConfig
 class JsonStoreDataAccess (config: CloudantConfig)  {
   lazy val logger: Logger = LoggerFactory.getLogger(getClass)
   implicit lazy val timeout: Long = config.requestTimeout
-  private val gson = new GsonBuilder().create()
 
   def getMany(limit: Int)(implicit columns: Array[String] = null): Seq[String] = {
     if (limit == 0) {
@@ -46,19 +45,16 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
       throw new CloudantException("Database " + config.getDbname +
         " schema sample size is " + limit + "!")
     }
-    // var r = this.getQueryResult[Seq[String]](config.getUrl(limit), processAll)
-    var r = config.getUrl(limit)
+    var r = this.getQueryResult[Seq[String]](config.getUrl(limit), processAll)
     if (r.isEmpty) {
-      // r = this.getQueryResult[Seq[String]](config.getUrl(limit, excludeDDoc = true),
-      //  processAll)
-      r = config.getUrl(limit, excludeDDoc = true)
+      r = this.getQueryResult[Seq[String]](config.getUrl(limit, excludeDDoc = true),
+        processAll)
     }
     if (r.isEmpty) {
       throw new CloudantException("Database " + config.getDbname +
         " doesn't have any non-design documents!")
     } else {
-      // post-processing using previous processAll logic
-      r.map(r => convert(r))
+      r
     }
   }
 
@@ -115,14 +111,14 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
    postData: String = null) : T = {
     logger.info(s"Loading data from Cloudant using: $url , postData: $postData")
 
-    val clRequest: HttpRequest = getClRequest(url, postData)
+    val clRequest: HttpConnection = getClRequest(url, postData)
 
-    val clResponse: HttpResponse[String] = clRequest.execute()
-    if (! clResponse.isSuccess) {
+    val clResponse: HttpConnection = clRequest.execute()
+    if (clResponse.getConnection.getResponseCode != 200) {
       throw new CloudantException("Database " + config.getDbname +
-        " request error: " + clResponse.body)
+        " request error: " + clResponse.responseAsString)
     }
-    val data = postProcessor(clResponse.body)
+    val data = postProcessor(clResponse.responseAsString)
     logger.debug(s"got result:$data")
     data
   }
@@ -132,51 +128,9 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
   }
 
   def getClRequest(url: String, postData: String = null,
-                   httpMethod: String = null): HttpRequest = {
-    val requestTimeout = config.requestTimeout.toInt
-    config.username match {
-      case null =>
-        if (postData != null) {
-          Http(url)
-            .postData(postData)
-            .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-            .header("Content-Type", "application/json")
-            .header("User-Agent", "spark-cloudant")
-        } else {
-          if (httpMethod != null) {
-            Http(url)
-              .method(httpMethod)
-              .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-              .header("User-Agent", "spark-cloudant")
-          } else {
-            Http(url)
-              .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-              .header("User-Agent", "spark-cloudant")
-          }
-        }
-      case _ =>
-        if (postData != null) {
-          Http(url)
-            .postData(postData)
-            .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-            .header("Content-Type", "application/json")
-            .header("User-Agent", "spark-cloudant")
-            .auth(config.username, config.password)
-        } else {
-          if (httpMethod != null) {
-            Http(url)
-              .method(httpMethod)
-              .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-              .header("User-Agent", "spark-cloudant")
-              .auth(config.username, config.password)
-          } else {
-            Http(url)
-              .timeout(connTimeoutMs = 1000, readTimeoutMs = requestTimeout)
-              .header("User-Agent", "spark-cloudant")
-              .auth(config.username, config.password)
-          }
-        }
-    }
+                   httpMethod: String = null): HttpConnection = {
+    // val requestTimeout = config.requestTimeout.toInt
+    config.executeRequest(url, postData)
   }
 
 
@@ -190,7 +144,7 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
     val futures = bulks.map( bulk => {
       val data = config.getBulkRows(bulk)
       val url = config.getBulkPostUrl.toString
-      val clRequest: HttpRequest = getClRequest(url, data)
+      val clRequest: HttpConnection = getClRequest(url, data)
         Future {
           clRequest.execute()
         }
@@ -198,17 +152,17 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
     )
     // remaining - number of requests remained to succeed
     val remaining = new AtomicInteger(futures.length)
-    val p = Promise[HttpResponse[String]]
+    val p = Promise[HttpConnection]
     futures foreach {
       _ onComplete {
-        case Success(clResponse: HttpResponse[String]) =>
+        case Success(clResponse: HttpConnection) =>
           // find if there was error in saving at least one of docs
-          val resBody: String = clResponse.body
+          val resBody: String = clResponse.responseAsString
           val isErr = (resBody contains config.getConflictErrStr) ||
             (resBody contains config.getForbiddenErrStr)
-          if (!clResponse.isSuccess || isErr) {
+          if ((clResponse.getConnection.getResponseCode == 200) || isErr) {
             val e = new CloudantException("Save to database:" + config.getDbname +
-                " failed with reason: " + clResponse.body)
+                " failed with reason: " + clResponse.getConnection.getResponseMessage)
             p.tryFailure(e)
           } else if (remaining.decrementAndGet() == 0) {
             // succeed the whole save operation if all requests success

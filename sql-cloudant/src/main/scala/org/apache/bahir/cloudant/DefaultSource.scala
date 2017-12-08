@@ -106,11 +106,11 @@ class DefaultSource extends RelationProvider
         if (inSchema != null) {
           inSchema
         } else if (!config.isInstanceOf[CloudantChangesConfig]
-          || config.viewName != null || config.indexName != null) {
+          || config.viewName != null || config.indexPath != null) {
           val df = if (config.getSchemaSampleSize ==
             JsonStoreConfigManager.ALLDOCS_OR_CHANGES_LIMIT &&
             config.viewName == null
-            && config.indexName == null) {
+            && config.indexPath == null) {
             val cloudantRDD = new JsonStoreRDD(sqlContext.sparkContext, config)
             dataFrame = sqlContext.read.json(cloudantRDD)
             dataFrame

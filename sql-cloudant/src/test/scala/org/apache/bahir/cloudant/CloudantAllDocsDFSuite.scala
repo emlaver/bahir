@@ -34,7 +34,7 @@ class CloudantAllDocsDFSuite extends ClientSparkFunSuite {
       .config("cloudant.endpoint", endpoint)
       .getOrCreate()
   }
-
+/*
   testIfEnabled("load and save data from Cloudant database") {
     // Loading data from Cloudant db
     val df = spark.read.format("org.apache.bahir.cloudant").load("n_flight")
@@ -44,7 +44,7 @@ class CloudantAllDocsDFSuite extends ClientSparkFunSuite {
     // all docs in database minus the design doc
     assert(df.count() == 1967)
   }
-
+*/
   testIfEnabled("load and count data from Cloudant search index") {
     val df = spark.read.format("org.apache.bahir.cloudant")
       .option("index", "_design/view/_search/n_flights").load("n_flight")
@@ -53,7 +53,7 @@ class CloudantAllDocsDFSuite extends ClientSparkFunSuite {
       .orderBy(df("flightSegmentId")).count()
     assert(total == 50)
   }
-
+/*
   testIfEnabled("load data and count rows in filtered dataframe") {
     // Loading data from Cloudant db
     val df = spark.read.format("org.apache.bahir.cloudant")
@@ -118,4 +118,5 @@ class CloudantAllDocsDFSuite extends ClientSparkFunSuite {
       .load("n_flight")
     assert(df.count() == 1)
   }
+ */
 }

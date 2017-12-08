@@ -25,11 +25,11 @@ import com.cloudant.client.api.ClientBuilder
 import com.cloudant.client.api.CloudantClient
 import com.google.gson.{Gson, JsonArray, JsonObject}
 import org.scalatest.BeforeAndAfter
-
 import org.apache.spark.{SparkConf, SparkFunSuite}
 import org.apache.spark.sql.SparkSession
-
 import org.apache.bahir.cloudant.TestUtils.shouldRunTests
+
+import scala.io.Source
 
 class ClientSparkFunSuite extends SparkFunSuite with BeforeAndAfter {
   private val tempDir: File = new File(System.getProperty("java.io.tmpdir") + "/sql-cloudant/")
@@ -81,10 +81,10 @@ class ClientSparkFunSuite extends SparkFunSuite with BeforeAndAfter {
     // insert docs and design docs from JSON flat files
     for (dbName: String <- TestUtils.testDatabasesList) {
       val db = client.database(dbName, true)
-      val jsonFilePath = System.getProperty("user.dir") +
-        "/src/test/resources/json-files/" + dbName + ".json"
-      if (new File(jsonFilePath).exists()) {
-        val jsonFileArray = new Gson().fromJson(new FileReader(jsonFilePath), classOf[JsonArray])
+      val jsonFilePath = getClass.getResource("/json-files/" + dbName + ".json")
+      if (jsonFilePath != null && new File(jsonFilePath.getFile).exists()) {
+        val jsonFileArray = new Gson().fromJson(new FileReader(jsonFilePath.getFile),
+          classOf[JsonArray])
         val listOfObjects = new util.ArrayList[JsonObject]
         if (jsonFileArray != null) {
           var i = 0

@@ -20,10 +20,10 @@ import java.io.InputStreamReader
 
 import play.api.libs.json.Json
 
-import scalaj.http._
 import org.apache.spark.SparkConf
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.receiver.Receiver
+
 import org.apache.bahir.cloudant.common._
 
 class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String])
@@ -43,7 +43,6 @@ class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String]
   }
 
   private def receive(): Unit = {
-    val client = config.getClient
     val url = config.getContinuousChangesUrl.toString
     val selector: String = if (config.getSelector != null) {
       "{\"selector\":" + config.getSelector + "}"
@@ -51,7 +50,7 @@ class CloudantReceiver(sparkConf: SparkConf, cloudantParams: Map[String, String]
       null
     }
 
-    val changesRequest = config.executeRequest(selector)
+    val changesRequest = config.executeRequest(url, selector)
     if (changesRequest.getConnection.getResponseCode / 100 == 2 ) {
       import java.io.BufferedReader
       val reader = new BufferedReader(

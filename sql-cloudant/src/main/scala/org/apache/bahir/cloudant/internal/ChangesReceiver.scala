@@ -18,13 +18,11 @@ package org.apache.bahir.cloudant.internal
 
 import java.io.InputStreamReader
 
-import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json.Json
 
-import scalaj.http._
-import org.apache.spark.SparkConf
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.receiver.Receiver
+
 import org.apache.bahir.cloudant.CloudantChangesConfig
 import org.apache.bahir.cloudant.common._
 
@@ -55,7 +53,7 @@ class ChangesReceiver(config: CloudantChangesConfig)
       }
     }
 
-    val changesRequest = config.executeRequest(selector)
+    val changesRequest = config.executeRequest(url, selector)
     if (changesRequest.getConnection.getResponseCode / 100 == 2 ) {
       import java.io.BufferedReader
       val reader = new BufferedReader(
