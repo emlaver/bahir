@@ -266,11 +266,7 @@ class CloudantConfig(val protocol: String, val host: String,
       } else if (queryUsed) {
         ""
       } else {
-        if (indexPath != null) {
-          "include_docs=true"
-        } else {
-          "include_docs=true&limit=" + limit
-        }
+        "include_docs=true&limit=" + limit
       } // TODO Index query does not support subset query. Should disable Partitioned loading?
     }
     if (suffix.length == 0) {
