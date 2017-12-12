@@ -179,9 +179,9 @@ class CloudantConfig(val protocol: String, val host: String,
     }
   }
 
-  /* Url containing limit to count total docs in a Cloudant database.
+  /* Total count of documents in a Cloudant database.
   *
-  * @return url with one doc limit for retrieving total doc count
+  * @return total doc count number
   */
   def getTotal(url: String = JsonStoreConfigManager.ALL_DOCS_INDEX): Int = {
     if (viewPath != null) {
@@ -193,10 +193,6 @@ class CloudantConfig(val protocol: String, val host: String,
       //  Http.GET(new URL(database.getDBUri + "/_all_docs?limit=1")))
       getTotalRows(Json.parse(getAllDocsTotal(1)))
     }
-  }
-
-  def getAllDocs: Seq[JsonObject] = {
-    buildAllDocsRequest(-1).build().getResponse.getDocsAs(classOf[JsonObject]).asScala.toList
   }
 
   def getAllDocsTotal(limit: Int): String = {
