@@ -183,6 +183,14 @@ class CloudantConfig(val protocol: String, val host: String,
   *
   * @return total doc count number
   */
+  def getTotalUrl(url: String): String = {
+    if (url.contains('?')) {
+      url + "&limit=1"
+    } else {
+      url + "?limit=1"
+    }
+  }
+
   def getTotal(url: String = JsonStoreConfigManager.ALL_DOCS_INDEX): Int = {
     if (viewPath != null) {
       // "limit=" + limit + "&skip=" + skip

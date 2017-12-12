@@ -70,7 +70,10 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
       (implicit postData: String = null): Int = {
       if (queryUsed) config.queryLimit // Query can not retrieve total row now.
       else {
-        config.getTotal(url)
+        // config.getTotal(url)
+        val totalUrl = config.getTotalUrl(url)
+        this.getQueryResult[Int](totalUrl,
+          { result => config.getTotalRows(Json.parse(result))})
       }
   }
 
