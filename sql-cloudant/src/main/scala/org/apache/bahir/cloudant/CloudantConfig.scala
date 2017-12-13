@@ -155,7 +155,7 @@ class CloudantConfig(val protocol: String, val host: String,
   * @return url with one doc limit for retrieving total doc count
   */
   def getUrl(limit: Int, excludeDDoc: Boolean = false): String = {
-    if (viewName == null) {
+    if (viewPath == null) {
       val baseUrl = {
         // if (excludeDDoc) {
         //  dbUrl + "/_all_docs?startkey=%22_design0/%22&include_docs=true"
@@ -172,9 +172,9 @@ class CloudantConfig(val protocol: String, val host: String,
       }
     } else {
       if (limit == JsonStoreConfigManager.ALLDOCS_OR_CHANGES_LIMIT) {
-        dbUrl + "/" + viewName
+        dbUrl + "/" + viewPath
       } else {
-        dbUrl + "/" + viewName + "?limit=" + limit
+        dbUrl + "/" + viewPath + "?limit=" + limit
       }
     }
   }
