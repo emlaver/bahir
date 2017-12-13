@@ -18,17 +18,18 @@ package org.apache.bahir.cloudant.common
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.language.implicitConversions
 import scala.util.{Failure, Success}
 
+import com.cloudant.client.api.model.Response
 import com.cloudant.http.HttpConnection
-import com.google.gson.Gson
+import play.api.libs.json._
 import ExecutionContext.Implicits.global
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.libs.json._
 
 import org.apache.bahir.cloudant.CloudantConfig
 
@@ -37,13 +38,8 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
   implicit lazy val timeout: Long = config.requestTimeout
 
   def getMany(limit: Int)(implicit columns: Array[String] = null): Seq[String] = {
-    if (limit == 0) {
-      throw new CloudantException("Database " + config.getDbname +
-        " schema sample size is 0!")
-    }
-    if (limit < -1) {
-      throw new CloudantException("Database " + config.getDbname +
-        " schema sample size is " + limit + "!")
+    if (limit == 0 || limit < -1) {
+      throw new CloudantException("Schema size '" + limit + "' is not valid.")
     }
     var r = this.getQueryResult[Seq[String]](config.getUrl(limit), processAll)
     if (r.isEmpty) {
@@ -132,7 +128,6 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
 
   def getClRequest(url: String, postData: String = null,
                    httpMethod: String = null): HttpConnection = {
-    // val requestTimeout = config.requestTimeout.toInt
     config.executeRequest(url, postData)
   }
 
@@ -145,31 +140,29 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
     logger.debug(s"total records:${rows.size}=bulkSize:$bulkSize * totalBulks:$totalBulks")
 
     val futures = bulks.map( bulk => {
-      val data = config.getBulkRows(bulk)
-      val url = config.getBulkPostUrl.toString
-      val clRequest: HttpConnection = getClRequest(url, data)
+      val jsonData = config.getBulkRows(bulk)
         Future {
-          clRequest.execute()
+          config.getDatabase.bulk(jsonData.asJava)
         }
       }
     )
     // remaining - number of requests remained to succeed
     val remaining = new AtomicInteger(futures.length)
-    val p = Promise[HttpConnection]
+    val p = Promise[java.util.List[Response]]
     futures foreach {
       _ onComplete {
-        case Success(clResponse: HttpConnection) =>
-          // find if there was error in saving at least one of docs
-          val resBody: String = clResponse.responseAsString
-          val isErr = (resBody contains config.getConflictErrStr) ||
-            (resBody contains config.getForbiddenErrStr)
-          if ((clResponse.getConnection.getResponseCode == 200) || isErr) {
+        case Success(clResponses) =>
+          if (clResponses contains config.getConflictErrStr) {
             val e = new CloudantException("Save to database:" + config.getDbname +
-                " failed with reason: " + clResponse.getConnection.getResponseMessage)
+              " failed with reason: " + config.getConflictErrStr)
+            p.tryFailure(e)
+          } else if (clResponses contains config.getForbiddenErrStr) {
+            val e = new CloudantException("Save to database:" + config.getDbname +
+              " failed with reason: " + config.getForbiddenErrStr)
             p.tryFailure(e)
           } else if (remaining.decrementAndGet() == 0) {
             // succeed the whole save operation if all requests success
-            p.trySuccess(clResponse)
+            p.trySuccess(clResponses)
           }
         // if a least one save request fails - fail the whole save operation
         case Failure(e) =>

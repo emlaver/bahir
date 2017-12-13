@@ -197,8 +197,7 @@ class CloudantConfig(val protocol: String, val host: String,
       val viewResp = buildViewRequest(1).build().getResponse.getDocsAs(classOf[String])
       getTotalRows(Json.parse(viewResp.get(0).toString))
     } else {
-      // val response = client.executeRequest(
-      //  Http.GET(new URL(database.getDBUri + "/_all_docs?limit=1")))
+      // /_all_docs?limit=1
       getTotalRows(Json.parse(getAllDocsTotal(1)))
     }
   }
@@ -381,9 +380,9 @@ class CloudantConfig(val protocol: String, val host: String,
     dbUrl + "/_bulk_docs"
   }
 
-  def getBulkRows(rows: List[String]): String = {
-    val docs = rows.map { x => Json.parse(x) }
-    Json.stringify(Json.obj("docs" -> Json.toJson(docs.toSeq)))
+  def getBulkRows(rows: List[String]): List[JsonObject] = {
+    val gson = new Gson()
+    rows.map { x => gson.fromJson(x, classOf[JsonObject]) }
   }
 
   def getConflictErrStr: String = {
