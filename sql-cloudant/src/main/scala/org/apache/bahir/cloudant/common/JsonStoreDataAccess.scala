@@ -66,10 +66,9 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
       (implicit postData: String = null): Int = {
       if (queryUsed) config.queryLimit // Query can not retrieve total row now.
       else {
-        config.getTotalDocCount
-        // val totalUrl = config.getTotalUrl(url)
-        // this.getQueryResult[Int](totalUrl,
-        //  { result => config.getTotalRows(Json.parse(result))})
+        val totalUrl = config.getTotalUrl(url)
+         this.getQueryResult[Int](totalUrl,
+           { result => config.getTotalRows(Json.parse(result))})
       }
   }
 
@@ -104,13 +103,25 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
     result
   }
 
+  private def getChangesResult[T]
+  (url: String, postProcessor: (String) => T)
+  (implicit columns: Array[String] = null,
+   postData: String = null) : T = {
+    val clRequest: HttpConnection = config.executeRequest(url, postData)
+
+    val clResponse: HttpConnection = clRequest.execute()
+    val data = postProcessor(clResponse.responseAsString)
+    logger.debug(s"got result:$data")
+    data
+  }
+
   private def getQueryResult[T]
   (url: String, postProcessor: (String) => T)
   (implicit columns: Array[String] = null,
    postData: String = null) : T = {
     logger.info(s"Loading data from Cloudant using: $url , postData: $postData")
 
-    val clRequest: HttpConnection = getClRequest(url, postData)
+    val clRequest: HttpConnection = config.executeRequest(url, postData)
 
     val clResponse: HttpConnection = clRequest.execute()
     if (clResponse.getConnection.getResponseCode != 200) {
@@ -125,12 +136,6 @@ class JsonStoreDataAccess (config: CloudantConfig)  {
   def createDB(): Unit = {
     config.getClient.createDB(config.getDbname)
   }
-
-  def getClRequest(url: String, postData: String = null,
-                   httpMethod: String = null): HttpConnection = {
-    config.executeRequest(url, postData)
-  }
-
 
   def saveAll(rows: List[String]): Unit = {
     if (rows.isEmpty) return

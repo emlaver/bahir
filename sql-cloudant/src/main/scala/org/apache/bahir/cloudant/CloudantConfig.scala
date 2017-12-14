@@ -115,7 +115,7 @@ class CloudantConfig(val protocol: String, val host: String,
     searchReq.querySearchResult(default_filter, classOf[JsonObject])
   }
 
-  def executeRequest(stringUrl: String, postData: String): HttpConnection = {
+  def executeRequest(stringUrl: String, postData: String = null): HttpConnection = {
     val url = new URL(stringUrl)
     if(postData != null) {
       val conn = Http.POST(url, "application/json")
@@ -190,16 +190,18 @@ class CloudantConfig(val protocol: String, val host: String,
   }
 
   def getTotalDocCount: Int = {
+    val limit = 1
     if (viewPath != null) {
       // "limit=" + limit + "&skip=" + skip
-      buildViewRequest(1, includeDocs = false).build().getResponse.getTotalRowCount.toInt
-      // getTotalRows(viewResp.get(0))
+      buildViewRequest(limit, includeDocs = false).build().getResponse.getTotalRowCount.toInt
     } else {
       // /_all_docs?limit=1
-      buildAllDocsRequest(1, includeDocs = false).build().getResponse
-        .asInstanceOf[ViewResponse[String, AllDocsRequestResponse.Revision]].getTotalRowCount.toInt
-      // .getDocsAs(classOf[JsonObject])
-      // getTotalRows(allDocsResp.get(0))
+      // Note: java-cloudant's AllDocsRequest doesn't have a getTotalRowCount method
+      // buildAllDocsRequest(1, includeDocs = false).build().getResponse.getTotalRowCount.toInt
+      val gson = new Gson()
+      val response = client.executeRequest(Http.GET(
+        new URL(database.getDBUri + File.separator + endpoint + "?limit=" + limit)))
+      getResultTotalRows(gson.fromJson(response.responseAsString, classOf[JsonObject]))
     }
   }
 
@@ -239,7 +241,7 @@ class CloudantConfig(val protocol: String, val host: String,
                   allowQuery: Boolean = false): (String, Boolean, Boolean) = {
     val (url: String, pusheddown: Boolean, queryUsed: Boolean) =
       calculate(field, start, startInclusive, end, endInclusive, allowQuery)
-    if (includeDoc && !queryUsed ) {
+    if (includeDoc && !queryUsed) {
       if (url.indexOf('?') > 0) {
         (url + "&include_docs=true", pusheddown, queryUsed)
       } else {
@@ -248,20 +250,6 @@ class CloudantConfig(val protocol: String, val host: String,
     } else {
       (url, pusheddown, queryUsed)
     }
-  }
-
-  def getDocsFromView(skip: Int, limit: Int): Seq[JsonObject] = {
-    buildViewRequest(limit).skip(skip).build().getResponse
-      .getDocsAs(classOf[JsonObject]).asScala
-  }
-
-  def getRowsFromSearch(limit: Int): Seq[JsonObject] = {
-    val gson = new Gson()
-    var list = List[JsonObject]()
-    for (row <- buildSearchRequest(limit).getRows.asScala) {
-      list ::= gson.fromJson(row.getDoc, classOf[JsonObject])
-    }
-    list
   }
 
 
@@ -359,7 +347,7 @@ class CloudantConfig(val protocol: String, val host: String,
     }
   }
 
-  /* def getTotalRows(result: JsValue): Int = {
+  def getTotalRows(result: JsValue): Int = {
     val resultKeys = result.as[JsObject].keys
     if(resultKeys.contains("total_rows")) {
       (result \ "total_rows").as[Int]
@@ -368,9 +356,9 @@ class CloudantConfig(val protocol: String, val host: String,
     } else {
       1
     }
-  } */
+  }
 
-  def getTotalRows(result: JsonObject): Int = {
+  def getResultTotalRows(result: JsonObject): Int = {
     if (result.has("total_rows")) {
       result.get("total_rows").getAsInt
     } else if (result.has("pending")) {
