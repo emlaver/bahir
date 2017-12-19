@@ -56,18 +56,29 @@ class ChangesReceiver(config: CloudantChangesConfig)
     var count = 0
     val clRequest: HttpRequest = config.username match {
       case null =>
-        Http(url)
-          .postData(selector)
-          .timeout(connTimeoutMs = 1000, readTimeoutMs = 0)
-          .header("Content-Type", "application/json")
-          .header("User-Agent", "spark-cloudant")
+        if (selector != null) {
+          Http(url).postData(selector)
+            .timeout(connTimeoutMs = 1000, readTimeoutMs = 0)
+            .header("Content-Type", "application/json")
+            .header("User-Agent", "spark-cloudant")
+        } else {
+          Http(url).timeout(connTimeoutMs = 1000, readTimeoutMs = 0)
+            .header("Content-Type", "application/json")
+            .header("User-Agent", "spark-cloudant")
+        }
       case _ =>
-        Http(url)
-          .postData(selector)
-          .timeout(connTimeoutMs = 1000, readTimeoutMs = 0)
-          .header("Content-Type", "application/json")
-          .header("User-Agent", "spark-cloudant")
-          .auth(config.username, config.password)
+        if (selector != null) {
+          Http(url).postData(selector)
+            .timeout(connTimeoutMs = 1000, readTimeoutMs = 0)
+            .header("Content-Type", "application/json")
+            .header("User-Agent", "spark-cloudant")
+            .auth(config.username, config.password)
+        } else {
+          Http(url).timeout(connTimeoutMs = 1000, readTimeoutMs = 0)
+            .header("Content-Type", "application/json")
+            .header("User-Agent", "spark-cloudant")
+            .auth(config.username, config.password)
+        }
     }
 
     clRequest.exec((code, headers, is) => {

@@ -42,9 +42,7 @@ class CloudantChangesConfig(protocol: String, host: String, dbName: String,
     if (selector != null && !selector.isEmpty) {
       selector
     } else {
-      // Exclude design docs and deleted=true docs
-      "{ \"_id\": { \"$regex\": \"^(?!_design/)\" }, " +
-        "\"_deleted\": { \"$exists\": false } }"
+      null
     }
   }
 
