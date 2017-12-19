@@ -46,7 +46,11 @@ class ChangesReceiver(config: CloudantChangesConfig)
     // Get continuous _changes url
     val url = config.getChangesReceiverUrl.toString
     val selector: String = {
-      "{\"selector\":" + config.getSelector + "}"
+      if (config.getSelector != null) {
+        "{\"selector\":" + config.getSelector + "}"
+      } else {
+        null
+      }
     }
 
     var count = 0
