@@ -25,6 +25,9 @@ class CloudantChangesDFSuite extends ClientSparkFunSuite {
   val endpoint = "_changes"
 
   before {
+    // Exclude design docs and deleted=true docs
+    val selector = "{ \"_id\": { \"$regex\": \"^(?!_design/)\" }, " +
+      "\"_deleted\": { \"$exists\": false } }"
     spark = SparkSession.builder().config(conf)
       .config("cloudant.protocol", TestUtils.getProtocol)
       .config("cloudant.host", TestUtils.getHost)
@@ -32,6 +35,7 @@ class CloudantChangesDFSuite extends ClientSparkFunSuite {
       .config("cloudant.password", TestUtils.getPassword)
       .config("cloudant.endpoint", endpoint)
       .config("cloudant.batchInterval", 5)
+      .config("selector", selector)
       .config("spark.streaming.unpersist", "false")
       .getOrCreate()
   }
