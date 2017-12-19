@@ -33,6 +33,7 @@ class CloudantChangesDFSuite extends ClientSparkFunSuite {
       .config("cloudant.username", TestUtils.getUsername)
       .config("cloudant.password", TestUtils.getPassword)
       .config("cloudant.endpoint", endpoint)
+      .config("cloudant.batchInterval", 5)
       .config("spark.streaming.unpersist", "false")
       .getOrCreate()
   }
