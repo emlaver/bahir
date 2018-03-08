@@ -146,6 +146,12 @@
                                   <exclude>commons-beanutils:*</exclude>
                               </excludes>
                           </artifactSet>
+                          <relocations>
+                              <relocation>
+                                  <pattern>play</pattern>
+                                  <shadedPattern>shade.thirdparty.play</shadedPattern>
+                              </relocation>
+                          </relocations>
                       </configuration>
                   </execution>
               </executions>
