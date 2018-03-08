@@ -28,18 +28,6 @@ import org.apache.spark.sql.sources._
 import org.apache.bahir.cloudant.CloudantConfig
 
 /**
- * JsonStoreRDDPartition defines each partition as a subset of a query result:
-  * the limit rows returns and the skipped rows.
- */
-
-private[cloudant] class JsonStoreRDDPartition(val url: String, val skip: Int, val limit: Int,
-    val idx: Int, val config: CloudantConfig, val selector: JsValue, val fields: JsValue,
-    val queryUsed: Boolean)
-    extends Partition with Serializable{
-  val index: Int = idx
-}
-
-/**
  *  The main purpose of JsonStoreRDD is to be able to create parallel read
  *  by partition for dataaccess getAll (by condition) scenarios
  *  defaultPartitions : how many partition intent,
